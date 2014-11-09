@@ -64,7 +64,7 @@ var vertexcolorstyle = 3;
 
 // Take a walk around the Schwarz triangle
 var tours = [
-    [],
+    [], // Can be set from query params
     [ [1,0,0],[1,1,0],[0,1,0],[0,1,1],[0,0,1],[1,0,1],[1,0,0],
       [1,1,1],[1,1,0],[0,1,0],[1,1,1],[0,1,1],[0,0,1],[1,1,1],[1,0,1] ],
     [ [2,-1,0], [1,0,0], [0,1,0], [-1,2,0],
