@@ -1,53 +1,67 @@
 <html>
   <head> 
     <meta charset="UTF-8">
-    <title>Polyhedron Explorer</title> 
+    <title>PolyJS</title> 
   </head> 
   <body>
+    <h2>Drawing uniform polyhedra with Javascript, WebGL and THREE.js</h2>
     <p>
-      Drawing uniform polyhedra with Javascript, WebGL and THREE.js.
+    <a href="https://github.com/matthewarcus/polyjs/">Sources on Github</a>
     <h2>Examples</h2>
+    <h3>Sequences</h3>
     <ul>
-      <li><a href="poly.html?args=2:3:5&sym=3:2:4&colorstyle=1&snub&dual">[3 2 5]</a></li>
-      <li><a href="poly.html?args=3:5/2:5/3&sym=3:2:4&colorstyle=1&snub&dorotate">[3 5/2 5/3]</a></li>
-      <li><a href="poly.html?args=2:2:37/19&sym=3:2:4&colorstyle=2&snub&compound&dorotate">[2 2 37/19]</a></li>
-      <li><a href="poly.html?args=5/4:5/4:5/4&sym=2:3:5&colorstyle=1&dual">[5/4 5/4 5/4]</a></li>
-      <li><a href="poly.html?args=3:2:5&sym=3:2:4&colorstyle=1&dorotate&tour=1&run">[3 2 5]</a></li>
+      <!-- <li><a href="poly.html?args=2:3:5&sym=3:2:4&colorstyle=1&snub&dual">[3 2 5]</a></li> -->
+      <li><a href="poly.html?args=3:2:5&sym=3:2:4&colorstyle=1&dorotate&tour=1&run">[3 2 5]: Convex icosahedral symmetry</a></li>
+      <li><a href="poly.html?args=3:2:5&sym=3:2:4&colorstyle=1&dorotate&tour=2&run">[3 2 5]: Outside the Schwarz triangle</a></li>
+      <li><a href="poly.html?args=5/4:5/4:5/4&sym=2:3:5&colorstyle=1&dorotate&run">[5/4 5/4 5/4]</a></li>
       <li><a href="poly.html?args=2:3/2:5/3&sym=3:2:4&colorstyle=1&dorotate&run">[2 3/2 5/3]</a></li>
       <li><a href="poly.html?args=3:2:5/3&sym=3:2:4&colorstyle=1&t=7&tour=1&dorotate&run">[3 2 5/3]</a></li>
-      <li><a href="poly.html?args=3:2:5/3&colorstyle=3&z=8&tour=1&t=7&dual&dorotate&run">[3 2 5/3] dual</a></li>
-      <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&snub&colorstyle=2">U72</a></li>
+      <li><a href="poly.html?args=3:2:5/3&colorstyle=3&z=8&tour=1&t=7&dual&dorotate&run">[3 2 5/3]: dual figures</a></li>
+    </ul>
+    <h3>Single Polyhedra</h3>
+    <ul>
+      <li><a href="poly.html?args=3:5/2:5/3&sym=3:2:4&colorstyle=1&tri=1:1:1&snub&dorotate">[3 5/2 5/3]</a></li>
+      <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&tri=1:1:1&snub&colorstyle=2&dorotate">U72</a></li>
       <!-- [2 2 1] doesn't make for a very interesting polyhedron, but we can use it as a symmetry to combine mirror images of other polyhedra. Here we have two copies of ???, with "hemi" faces added (from the origin to each edge) and certain other sets of faces hidden. The result is the two uniform polyhedra that cannot be made by a "minute variation" of the Wythoff construction-->
-      <li><a href="poly.html?args=5/3:5/2:3&sym=2:2:1&colorstyle=1&hemi&hide=3&hide=4&snub&compound&dorotate">U75 "Miller's Monster"</a></li>
-      <li><a href="poly.html?args=5/3:5/2:3&sym=2:2:1&colorstyle=1&hemi&hide=2&hide=3&snub&compound&dorotate">U?? "Skilling's Figure"</a></li>
+      <li><a href="poly.html?args=5/3:5/2:3&sym=2:2:1&colorstyle=1&hemi&hide=3&hide=4&tri=1:1:1&snub&compound&dorotate">U75: "Miller's Monster"</a></li>
+      <li><a href="poly.html?args=5/3:5/2:3&sym=2:2:1&colorstyle=1&hemi&hide=2&hide=3&tri=1:1:1&snub&compound&dorotate">"Skilling's Figure"</a></li>
+    </ul>
+    <h3>Misc</h3>
+    <ul>
+      <li><a href="poly.html?args=2:2:37/19&sym=3:2:4&colorstyle=2&tri=1:1:1&snub&compound&dorotate">[2 2 37/19]: A nice compound</a></li>
       <!-- We can view the final stellation of our polyhedra -->
       <li><a href="poly.html?args=2:5/3:3&sym=2:3:5&colorstyle=1&stellate&dorotate&z=20&t=3&tour=1">Stellation</a></li>
       <li><a href="poly.html?args=2:5:3&sym=2:3:5&colorstyle=1&dorotate&compound&dozrot&run&t=7&tour=1">Compound animation</a></li>
+      <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&snub&colorstyle=4&t=7&tour=1&z=0.01&tridepth=4&dorotate&run&invert">!!!</a></li>
+    </ul>
+    <h3>Uniform Compounds</h3>
+    <ul>
       <li><a href="poly.html?args=2:3:3&sym=2:3:3&dorotonly&dozrot&compound&dorotate&tri=0:1:0">UC01</a></li>
       <li><a href="poly.html?args=2:3:3&sym=2:3:5&compound&dorotonly&dorotate&zrot=4&tri=0:1:0">UC05 - 5 tetrahedra</a></li>
       <li><a href="poly.html?args=2:3:3&sym=2:3:5&compound&colorstyle=3&dorotate&zrot=4&tri=0:1:0">UC06 - 10 tetrahedra</a></li>
       <li><a href="poly.html?args=3:2:4&sym=3:2:5&compound&tri=0:1:0&colorstyle=5&dozrot&dorotate">UC13-16</a></li>
       <li><a href="poly.html?args=3:2:4&sym=3:2:5&compound&tri=0:1:0&colorstyle=0&zrot=0.25&dorotate">UC14 - 20 Octahedra</a></li>
       <li><a href="poly.html?args=3:2:3/2&sym=3:2:5&tri=1:1:0&compound&colorstyle=3&dorotate&dorotonly&zrot=0.25">UC19 - 20 Hemihexahedra</a></li>
-      <li><a href="poly.html?args=5/3:2:2&sym=5:3:2&dozrot&snub&colorstyle=3&compound&dorotate">UC28</a></li>
+      <li><a href="poly.html?args=5/3:2:2&sym=5:3:2&dozrot&tri=1:1:1&snub&colorstyle=3&compound&dorotate">UC28</a></li>
       <li><a href="poly.html?args=6:2:2&sym=3:2:4&zrot=6&compound&tri=1:1:0&tridepth=4&colorstyle=5&dorotate">UC38</a></li>
-      <li><a href="poly.html?args=2:3/2:3/2&sym=2:3:3&colorstyle=1&snub&compound&dorotate">UC52</a></li>
+      <li><a href="poly.html?args=2:3/2:3/2&sym=2:3:3&colorstyle=1&tri=1:1:1&snub&compound&dorotate">UC52</a></li>
       <li><a href="poly.html?args=2:3:5/2&sym=2:3:5&colorstyle=5&tri=0:1:0&compound&dorotate">UC53</a></li>
-      <li><a href="poly.html?args=4/3:3/2:2&sym=2:3:5&zrot=4&hide=3&colorstyle=0&compound&dorotate">UC66</a></li>
+      <li><a href="poly.html?args=4/3:3/2:2&sym=2:3:5&zrot=4&hide=3&tri=1:1:1&colorstyle=0&compound&dorotate">UC66</a></li>
       <li><a href="poly.html?args=4:2:3/2&sym=2:3:5&colorstyle=4&tri=1:1:0&compound&dorotate">UC67</a></li>
-      <li><a href="poly.html?args=2:3:5&sym=2:3:5&compound&snub&colorstyle=1">UC69</a></li>
-      <li><a href="poly.html?args=2:5/2:3&sym=2:3:5&compound&snub&colorstyle=1">UC70</a></li>
-      <li><a href="poly.html?args=2:5/3:3&sym=2:3:5&compound&snub&colorstyle=1">UC71</a></li>
-      <li><a href="poly.html?args=2:5/3:3/2&sym=2:3:5&compound&snub&colorstyle=1">UC72</a></li>
-      <li><a href="poly.html?args=2:5:5/2&sym=2:3:5&compound&snub&colorstyle=1">UC73</a></li>
-      <li><a href="poly.html?args=2:5:5/3&sym=2:3:5&compound&snub&colorstyle=1">UC74</a></li>
-      <li><a href="poly.html?args=3:5:5/3&sym=3:2:5&compound&snub&colorstyle=1">UC75</a></li>
-      <!-- <li><a href="poly.html?args=5/3:5/2:3&sym=2:2:1&colorstyle=4&t=7&snub&compound&dorotate">???</a></li> -->
-      <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&snub&colorstyle=4&t=7&tour=1&z=0.01&tridepth=4&dorotate&run&invert">!!!</a></li>
+      <li><a href="poly.html?args=2:3:5&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC69</a></li>
+      <li><a href="poly.html?args=2:5/2:3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC70</a></li>
+      <li><a href="poly.html?args=2:5/3:3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC71</a></li>
+      <li><a href="poly.html?args=2:5/3:3/2&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC72</a></li>
+      <li><a href="poly.html?args=2:5:5/2&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC73</a></li>
+      <li><a href="poly.html?args=2:5:5/3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC74</a></li>
+      <li><a href="poly.html?args=3:5:5/3&sym=3:2:5&compound&snub&tri=1:1:1&colorstyle=1">UC75</a></li>
     </ul>
     <h2>References</h2>
     <li><a href="http://en.wikipedia.org/wiki/List_of_uniform_polyhedra_by_Schwarz_triangle">Uniform Polyhedra</a></li>
     <li><a href="http://en.wikipedia.org/wiki/Uniform_polyhedron_compound">Uniform Compounds</a></li>
+    <h2>Mouse Controls</h2>
+    <p>
+      Uses THREE.js OrbitControls: use mouse click and drag to rotate figure. Mouse wheel to zoom.
     <h2>Keyboard Controls</h2>
     <ul>
       <li>Up arrow: move forward</li>
@@ -57,12 +71,12 @@
       <li>p: return animation to start</li>
       <li>[: step animation back 1</li>
       <li>]: step animation forward 1</li>
-      <li>t: rotate colors</li>
+      <li>u: rotate colors</li>
       <li>f: step through color styles</li>
       <li>i: inversion on/off</li>
       <li>s: snub on/off</li>
       <li>d: change dual mode</li>
-      <li>u: change dual style</li>
+      <li>y: change dual style</li>
       <li>q: stellate on/off</li>
       <li>h: hemi on/off</li>
       <li>n: normalize on/off</li>

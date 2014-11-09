@@ -72,7 +72,7 @@ var tours = [
       [-1,0,2], [0,0,1], [1,0,0], [2,0,-1] ],
     [ [2,-1,0],[0,-1,2],[-1,0,2], [-1,2,0],[0,2,-1],[2,0,-1] ]
 ];
-var tournum = 0;
+var tournum = 1;
 
 function Stopwatch(init,step,running) {
     // When running, reported time is difference between Date.now()
@@ -548,6 +548,7 @@ function webglAvailable() {
                 initsym = makeangles(matches[1],1,matches[2],1,matches[3],1);
             } else if (matches = arg.match(/^tri=([\d.]+):([\d.]+):([\d.]+)$/)) {
                 tours[0].push([Number(matches[1]),Number(matches[2]),Number(matches[3])]);
+                tournum = 0;
             } else if (matches = arg.match(/^zrot=([\d]+)$/)) {
                 zrotation = Math.PI/Number(matches[1]);
             } else if (matches = arg.match(/^zrot=([\d]+.[\d]+)$/)) {
