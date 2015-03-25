@@ -6,9 +6,12 @@
   <body>
     <h2>Drawing uniform polyhedra with Javascript, WebGL and THREE.js</h2>
     <p>
-    <a href="https://github.com/matthewarcus/polyjs/">Sources on Github</a>
+    <a href="https://github.com/matthewarcus/polyjs/">Source on Github</a>
     <h2>Examples</h2>
     <h3>Sequences</h3>
+    <p>
+      Given a Schwarz triangle, we can move around inside that triangle to create different polyhedra (ie. given
+      a set of mirrors, we can move the vertex point around inside those mirrors). We can even move outside the triangle itself.
     <ul>
       <!-- <li><a href="poly.html?args=2:3:5&sym=3:2:4&colorstyle=1&snub&dual">[3 2 5]</a></li> -->
       <li><a href="poly.html?args=3:2:5&sym=3:2:4&colorstyle=1&dorotate&tour=1&run">[3 2 5]: Convex icosahedral symmetry</a></li>
@@ -29,12 +32,14 @@
     <h3>Misc</h3>
     <ul>
       <li><a href="poly.html?args=2:2:37/19&sym=3:2:4&colorstyle=2&tri=1:1:1&snub&compound&dorotate">[2 2 37/19]: A nice compound</a></li>
-      <!-- We can view the final stellation of our polyhedra -->
-      <li><a href="poly.html?args=2:5/3:3&sym=2:3:5&colorstyle=1&stellate&dorotate&z=20&t=3&tour=1">Stellation</a></li>
+      <li><a href="poly.html?args=2:5/3:3&sym=2:3:5&colorstyle=1&stellate&dorotate&z=20&t=3&tour=1">Stellation - final only.</a></li>
       <li><a href="poly.html?args=2:5:3&sym=2:3:5&colorstyle=1&dorotate&compound&dozrot&run&t=7&tour=1">Compound animation</a></li>
       <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&snub&colorstyle=4&t=7&tour=1&z=0.01&tridepth=4&dorotate&run&invert">!!!</a></li>
     </ul>
     <h3>Uniform Compounds</h3>
+    We can apply another set of symmetries to the polyhedron - our Schwarz triangle construction gives an axis of
+    symmetry along the z-axis so rotating around that axis gives different compounds. This includes the full set
+    of Uniform Compounds enumerated by Skilling, as well as many other combinations where eg. vertex transitivity fails.
     <ul>
       <li><a href="poly.html?args=2:3:3&sym=2:3:3&dorotonly&dozrot&compound&dorotate&tri=0:1:0">UC01</a></li>
       <li><a href="poly.html?args=2:3:3&sym=2:3:5&compound&dorotonly&dorotate&zrot=4&tri=0:1:0">UC05 - 5 tetrahedra</a></li>
@@ -48,13 +53,13 @@
       <li><a href="poly.html?args=2:3:5/2&sym=2:3:5&colorstyle=5&tri=0:1:0&compound&dorotate">UC53</a></li>
       <li><a href="poly.html?args=4/3:3/2:2&sym=2:3:5&zrot=4&hide=3&tri=1:1:1&colorstyle=0&compound&dorotate">UC66</a></li>
       <li><a href="poly.html?args=4:2:3/2&sym=2:3:5&colorstyle=4&tri=1:1:0&compound&dorotate">UC67</a></li>
-      <li><a href="poly.html?args=2:3:5&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC69</a></li>
-      <li><a href="poly.html?args=2:5/2:3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC70</a></li>
-      <li><a href="poly.html?args=2:5/3:3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC71</a></li>
-      <li><a href="poly.html?args=2:5/3:3/2&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC72</a></li>
-      <li><a href="poly.html?args=2:5:5/2&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC73</a></li>
-      <li><a href="poly.html?args=2:5:5/3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1">UC74</a></li>
-      <li><a href="poly.html?args=3:5:5/3&sym=3:2:5&compound&snub&tri=1:1:1&colorstyle=1">UC75</a></li>
+      <li><a href="poly.html?args=2:3:5&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC69</a></li>
+      <li><a href="poly.html?args=2:5/2:3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC70</a></li>
+      <li><a href="poly.html?args=2:5/3:3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC71</a></li>
+      <li><a href="poly.html?args=2:5/3:3/2&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC72</a></li>
+      <li><a href="poly.html?args=2:5:5/2&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC73</a></li>
+      <li><a href="poly.html?args=2:5:5/3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC74</a></li>
+      <li><a href="poly.html?args=3:5:5/3&sym=3:2:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC75</a></li>
     </ul>
     <h2>References</h2>
     <li><a href="http://en.wikipedia.org/wiki/List_of_uniform_polyhedra_by_Schwarz_triangle">Uniform Polyhedra</a></li>
@@ -83,6 +88,7 @@
       <li>c: compound on/off</li>
       <li>z: z rotation for compounds on/off</li>
       <li>a: reset z rotation</li>
+      <li>t: Change the tour around the Schwarz triangle</li>
       <li>x: rotation only for compounds on/off</li>
       <li>e: explode faces</li>
       <li>w: implode faces</li>
