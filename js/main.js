@@ -61,6 +61,7 @@ var dohemi = false;
 // Constants
 var numcolorstyles = 6;
 var vertexcolorstyle = 3;
+var origin = [0,0,0]
 
 // Take a walk around the Schwarz triangle
 var tours = [
@@ -73,6 +74,12 @@ var tours = [
     [ [2,-1,0],[0,-1,2],[-1,0,2], [-1,2,0],[0,2,-1],[2,0,-1] ]
 ];
 var tournum = 1;
+
+var initrunning = false;
+var initz = 3;
+var initsym = [2,3,5];
+var angles  = [2,3,5];
+var initt = 0;
 
 function Stopwatch(init,step,running) {
     // When running, reported time is difference between Date.now()
@@ -191,7 +198,6 @@ function drawtriangle(context,p,q,r,offset,type,i,n)
     }
 }
 
-var origin = [0,0,0]
 function drawface(context,centre,plist,facetype,i,tridepth)
 {
     if (plist.length == 3) {
@@ -383,15 +389,12 @@ function makeangles(a,b,c,d,e,f)
         b*c*e + d*e*a + f*a*c <= a*c*e) {
         alert("Not a Schwarz Triangle");
     }
-    //console.log(b*c*e,d*e*a,f*a*c,a*c*e);
-    //console.log(a,b,c,d,e,f);
     return [a/b,c/d,e/f];
 }
 
 // http://stackoverflow.com/questions/9899807/three-js-detect-webgl-support-and-fallback-to-regular-canvas
-function webglAvailable() {
+function webglAvailable(canvas) {
     try {
-        var canvas = document.createElement("canvas");
         return Boolean(window.WebGLRenderingContext && 
                        (canvas.getContext("webgl") || 
                         canvas.getContext("experimental-webgl")));
@@ -400,7 +403,7 @@ function webglAvailable() {
     } 
 }
 
-(function () {
+function run(canvas,width,height,options) {
     // Our state object
     function Context(geometry,colorface)
     {
@@ -416,27 +419,16 @@ function webglAvailable() {
     var context;
 
     // Initial values
-    var initrunning = false;
-    var initz = 3;
-    var initsym = [2,3,5];
-    var angles  = [2,3,5];
-    var initt = 0;
     var tri = null;
-    var qparams = window.location.search;
-    if (qparams.length > 0) {
-        // Strip off leading '?'
-        processargs(qparams.slice(1));
-    }
-    if (tours[0].length == 0) tours[0].push([1,1,1]);
 
     var scene = new THREE.Scene(); 
-    var width = window.innerWidth;
-    var height = window.innerHeight;
     var camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000); 
-    var renderer = (webglAvailable()) ? new THREE.WebGLRenderer() : new THREE.CanvasRenderer();
+    var params = { canvas: canvas, antialias: true };
+    var renderer =
+        (webglAvailable(canvas)) ? 
+        new THREE.WebGLRenderer(params) : 
+        new THREE.CanvasRenderer(params);
     renderer.setSize(width,height); 
-    //console.log("setSize: " + width + " " +  height); 
-    document.body.appendChild(renderer.domElement); 
 
     // Set up the scene
     var material = new THREE.MeshPhongMaterial({color: 0xffffff}); 
@@ -458,8 +450,8 @@ function webglAvailable() {
     scene.add(light);
 
     var controls = new THREE.OrbitControls( camera );
-    //var controls = new THREE.TrackballControls( camera );
 
+    
     // schwarz has all the details about the particular set of
     // fundamental regions we are working with.
     var schwarz = new Schwarz(angles);
@@ -468,7 +460,6 @@ function webglAvailable() {
     // Miscellaneous state setup
     var animstep = 10; // Seconds per animation step
     var sym = makesymmetry(initsym);
-    //var ip0 = sym[0]; var iq0 = sym[1]; var ir0 = sym[2];
     var ip0 = Vector.normalize(Vector.cross(sym[1],sym[2]));
     var iq0 = Vector.normalize(Vector.cross(sym[2],sym[0]));
     var ir0 = Vector.normalize(Vector.cross(sym[0],sym[1]));
@@ -534,62 +525,6 @@ function webglAvailable() {
             s.push("z = " + zrotation);
         }
         return s.join("; ");
-    }
-    function processargs(params)
-    {
-        // TBD: A more compact parameter format would be good.
-        var args = params.split('&');
-        var matches;
-        args.forEach(function (arg) {
-            //console.log("Doing parameter '" + arg + "'");
-            if (matches = arg.match(/^args=([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?$/)) {
-                angles = makeangles(matches[1],matches[2],matches[3],matches[4],matches[5],matches[6]);
-            } else if (matches = arg.match(/^sym=([\d]+):([\d]+):([\d]+)$/)) {
-                initsym = makeangles(matches[1],1,matches[2],1,matches[3],1);
-            } else if (matches = arg.match(/^tri=([\d.]+):([\d.]+):([\d.]+)$/)) {
-                tours[0].push([Number(matches[1]),Number(matches[2]),Number(matches[3])]);
-                tournum = 0;
-            } else if (matches = arg.match(/^zrot=([\d]+)$/)) {
-                zrotation = Math.PI/Number(matches[1]);
-            } else if (matches = arg.match(/^zrot=([\d]+.[\d]+)$/)) {
-                zrotation = Number(matches[1]);
-            } else if (matches = arg.match(/^colorstyle=([\d]+)$/)) {
-                colorstyle = Number(matches[1]);
-            } else if (matches = arg.match(/^hide=([\d]+)$/)) {
-                hideface[Number(matches[1])-1] = true;
-            } else if (matches = arg.match(/^t=([\d.]+)$/)) {
-                initt = Number(matches[1]);
-            } else if (matches = arg.match(/^z=([\d.]+)$/)) {
-                initz = Number(matches[1]);
-            } else if (matches = arg.match(/^tridepth=([\d]+)$/)) {
-                tridepth = Number(matches[1]);
-            } else if (matches = arg.match(/^tour=([\d]+)$/)) {
-                tournum = Number(matches[1]);
-            } else if (matches = arg.match(/^compound$/)) {
-                docompound = true;
-            } else if (matches = arg.match(/^snub$/)) {
-                dosnubify = true;
-            } else if (matches = arg.match(/^stellate$/)) {
-                dostellate = true;
-            } else if (matches = arg.match(/^dual$/)) {
-                drawtype = 2;
-            } else if (matches = arg.match(/^invert$/)) {
-                invertinc = -invertinc;
-                ifact = 1;
-            } else if (matches = arg.match(/^dozrot$/)) {
-                dozrot = true;
-            } else if (matches = arg.match(/^dorotonly$/)) {
-                dorotonly = true;
-            } else if (matches = arg.match(/^dorotate$/)) {
-                dorotate = true;
-            } else if (matches = arg.match(/^hemi$/)) {
-                dohemi = true;
-            } else if (matches = arg.match(/^run$/)) {
-                initrunning = true;
-            } else {
-                console.log("Ignoring parameter '" + arg + "'");
-            }
-        });
     }
 
     // Keyboard handlers
@@ -691,6 +626,7 @@ function webglAvailable() {
         if (handled) event.preventDefault();
     }
     document.addEventListener("keypress", onKeyPress, false);
+    // TBD: Defining a window resize handler here seems wrong
     window.addEventListener("resize", function() {
         var w = window.innerWidth;
         var h = window.innerHeight;
@@ -700,10 +636,14 @@ function webglAvailable() {
         camera.updateProjectionMatrix();
     });
     var render = function () { 
-        requestAnimationFrame(render); 
+        // Only need to render at 30fps
+        setTimeout( function() {
+            requestAnimationFrame( render );
+        }, 1000 / 30 );
+        //requestAnimationFrame(render); 
         if (dozrot) {
             // Rotate the symmetry frame
-            var zrotinc = 0.001;
+            var zrotinc = 0.0025;
             zrotation += zrotinc;
             needupdate = true;
         }
@@ -793,10 +733,83 @@ function webglAvailable() {
             if (!stopwatch.running) needupdate = false;
         }
         if (dorotate) {
-            mesh.rotation.x += 0.002; 
+            mesh.rotation.x += 0.004; 
             mesh.rotation.y += 0.002; 
         }
         renderer.render(scene, camera);
     };
     render(0); 
+}
+
+function processargs(params)
+{
+    // TBD: A more compact parameter format would be good.
+    var args = params.split('&');
+    var matches;
+    args.forEach(function (arg) {
+        //console.log("Doing parameter '" + arg + "'");
+        if (matches = arg.match(/^args=([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?$/)) {
+            angles = makeangles(matches[1],matches[2],matches[3],matches[4],matches[5],matches[6]);
+        } else if (matches = arg.match(/^sym=([\d]+):([\d]+):([\d]+)$/)) {
+            initsym = makeangles(matches[1],1,matches[2],1,matches[3],1);
+        } else if (matches = arg.match(/^tri=([\d.]+):([\d.]+):([\d.]+)$/)) {
+            tours[0].push([Number(matches[1]),Number(matches[2]),Number(matches[3])]);
+            tournum = 0;
+        } else if (matches = arg.match(/^zrot=([\d]+)$/)) {
+            zrotation = Math.PI/Number(matches[1]);
+        } else if (matches = arg.match(/^zrot=([\d]+.[\d]+)$/)) {
+            zrotation = Number(matches[1]);
+        } else if (matches = arg.match(/^colorstyle=([\d]+)$/)) {
+            colorstyle = Number(matches[1]);
+        } else if (matches = arg.match(/^hide=([\d]+)$/)) {
+            hideface[Number(matches[1])-1] = true;
+        } else if (matches = arg.match(/^t=([\d.]+)$/)) {
+            initt = Number(matches[1]);
+        } else if (matches = arg.match(/^z=([\d.]+)$/)) {
+            initz = Number(matches[1]);
+        } else if (matches = arg.match(/^tridepth=([\d]+)$/)) {
+            tridepth = Number(matches[1]);
+        } else if (matches = arg.match(/^tour=([\d]+)$/)) {
+            tournum = Number(matches[1]);
+        } else if (matches = arg.match(/^compound$/)) {
+            docompound = true;
+        } else if (matches = arg.match(/^snub$/)) {
+            dosnubify = true;
+        } else if (matches = arg.match(/^stellate$/)) {
+            dostellate = true;
+        } else if (matches = arg.match(/^dual$/)) {
+            drawtype = 2;
+        } else if (matches = arg.match(/^invert$/)) {
+            invertinc = -invertinc;
+            ifact = 1;
+        } else if (matches = arg.match(/^dozrot$/)) {
+            dozrot = true;
+        } else if (matches = arg.match(/^dorotonly$/)) {
+            dorotonly = true;
+        } else if (matches = arg.match(/^dorotate$/)) {
+            dorotate = true;
+        } else if (matches = arg.match(/^hemi$/)) {
+            dohemi = true;
+        } else if (matches = arg.match(/^run$/)) {
+            initrunning = true;
+        } else {
+            console.log("Ignoring parameter '" + arg + "'");
+        }
+    });
+}
+
+(function() {
+    var qparams = window.location.search;
+    if (qparams.length > 0) {
+        // Strip off leading '?'
+        processargs(qparams.slice(1));
+    }
+    if (tours[0].length == 0) tours[0].push([1,1,1]);
+
+    var canvas = document.createElement("canvas");
+    document.body.appendChild(canvas); 
+    var width = window.innerWidth;
+    var height = window.innerHeight;
+    run(canvas,width,height);
 })()
+
