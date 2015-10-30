@@ -5,6 +5,17 @@
   </head> 
   <body>
     <h2>Drawing uniform polyhedra with Javascript, WebGL and THREE.js</h2>
+    <canvas id="demoCanvas" width="480" height="480"></canvas>
+    <script src="js/three.min.js"></script> 
+    <script src="js/OrbitControls.js"></script> 
+    <script src="js/geometry.js"></script> 
+    <script src="js/main.js"></script>
+    <script>
+      (function() {
+       var options = "args=3:2:5/3&sym=3:2:2&colorstyle=1&t=7&tour=1&dorotate&run";
+       runOnCanvas(demoCanvas,options,demoCanvas.width,demoCanvas.height);
+      } ())
+    </script>
     <p>
     <a href="https://github.com/matthewarcus/polyjs/">Source on Github</a>
     <h2>Examples</h2>
@@ -69,8 +80,8 @@
       Uses THREE.js OrbitControls: use mouse click and drag to rotate figure. Mouse wheel to zoom.
     <h2>Keyboard Controls</h2>
     <ul>
-      <li>Up arrow: move forward</li>
-      <li>Down arrow: move backward</li>
+      <li>Shift + Up arrow: move forward</li>
+      <li>Shift + Down arrow: move backward</li>
       <li>r: rotation on/off</li>
       <li>space: animation on/off</li>
       <li>p: return animation to start</li>

@@ -17,6 +17,7 @@
 // *Better animated inversion
 // *Step to next position
 // *Explicitly specify trilinear coords
+// Get rid of global variables
 // Modularize
 // Table driven options
 // Better separation of generation and display
@@ -80,6 +81,9 @@ var initz = 3;
 var initsym = [2,3,5];
 var angles  = [2,3,5];
 var initt = 0;
+
+var renderer;
+var camera;
 
 function Stopwatch(init,step,running) {
     // When running, reported time is difference between Date.now()
@@ -403,7 +407,10 @@ function webglAvailable(canvas) {
     } 
 }
 
-function run(canvas,width,height,options) {
+function runOnCanvas(canvas,options,width,height) {
+    processoptions(options);
+    if (tours[0].length == 0) tours[0].push([1,1,1]);
+
     // Our state object
     function Context(geometry,colorface)
     {
@@ -422,9 +429,10 @@ function run(canvas,width,height,options) {
     var tri = null;
 
     var scene = new THREE.Scene(); 
-    var camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000); 
     var params = { canvas: canvas, antialias: true };
-    var renderer =
+    // Set global variables
+    camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000); 
+    renderer =
         (webglAvailable(canvas)) ? 
         new THREE.WebGLRenderer(params) : 
         new THREE.CanvasRenderer(params);
@@ -449,8 +457,7 @@ function run(canvas,width,height,options) {
     var light = new THREE.AmbientLight(0x404040); // soft white light
     scene.add(light);
 
-    var controls = new THREE.OrbitControls( camera );
-
+    var controls = new THREE.OrbitControls( camera, canvas );
     
     // schwarz has all the details about the particular set of
     // fundamental regions we are working with.
@@ -622,19 +629,15 @@ function run(canvas,width,height,options) {
         default:
             handled = false;
         }
-        needupdate = true;
-        if (handled) event.preventDefault();
+        if (handled) {
+            needupdate = true;
+            event.preventDefault();
+        }
     }
-    document.addEventListener("keypress", onKeyPress, false);
-    // TBD: Defining a window resize handler here seems wrong
-    window.addEventListener("resize", function() {
-        var w = window.innerWidth;
-        var h = window.innerHeight;
-        //console.log("resize " + w + " " + h);
-        renderer.setSize(w,h);
-        camera.aspect = w/h;
-        camera.updateProjectionMatrix();
-    });
+
+    // TBD: Defining a window event handler here seems wrong
+    window.addEventListener("keypress", onKeyPress, false);
+
     var render = function () { 
         // Only need to render at 30fps
         setTimeout( function() {
@@ -741,10 +744,10 @@ function run(canvas,width,height,options) {
     render(0); 
 }
 
-function processargs(params)
+function processoptions(options)
 {
     // TBD: A more compact parameter format would be good.
-    var args = params.split('&');
+    var args = options.split('&');
     var matches;
     args.forEach(function (arg) {
         //console.log("Doing parameter '" + arg + "'");
@@ -798,18 +801,23 @@ function processargs(params)
     });
 }
 
-(function() {
-    var qparams = window.location.search;
-    if (qparams.length > 0) {
+function runOnWindow() {
+    var options = window.location.search;
+    if (options.length > 0) {
         // Strip off leading '?'
-        processargs(qparams.slice(1));
+        options = options.slice(1)
     }
-    if (tours[0].length == 0) tours[0].push([1,1,1]);
 
     var canvas = document.createElement("canvas");
     document.body.appendChild(canvas); 
     var width = window.innerWidth;
     var height = window.innerHeight;
-    run(canvas,width,height);
-})()
-
+    window.addEventListener("resize", function() {
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+        renderer.setSize(w,h);
+        camera.aspect = w/h;
+        camera.updateProjectionMatrix();
+    });
+    runOnCanvas(canvas,options,width,height);
+}

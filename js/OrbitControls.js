@@ -464,35 +464,29 @@ THREE.OrbitControls = function ( object, domElement ) {
 
 	}
 
-	function onKeyDown( event ) {
+    function onKeyDown( event ) {
 
-		if ( scope.enabled === false || scope.noKeys === true || scope.noPan === true ) return;
-		
-		switch ( event.keyCode ) {
+	if ( scope.enabled === false || scope.noKeys === true || scope.noPan === true ) return;
+	if (!event.shiftKey) return;
 
-		        case scope.keys.UP:
-				scope.dollyOut();
-				scope.update();
-				break;
+        var handled = false;
+	switch ( event.keyCode ) {
 
-			case scope.keys.BOTTOM:
-				scope.dollyIn();
-				scope.update();
-				break;
+	case scope.keys.UP:
+	    scope.dollyOut();
+            handled = true;
+	    break;
 
-			case scope.keys.LEFT:
-				scope.pan( scope.keyPanSpeed, 0 );
-				scope.update();
-				break;
-
-			case scope.keys.RIGHT:
-				scope.pan( - scope.keyPanSpeed, 0 );
-				scope.update();
-				break;
-
-		}
-
+	case scope.keys.BOTTOM:
+	    scope.dollyIn();
+            handled = true;
+	    break;
 	}
+        if (handled) {
+            scope.update();
+            event.preventDefault();
+        }
+    }
 
 	function touchstart( event ) {
 
