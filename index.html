@@ -5,15 +5,20 @@
   </head> 
   <body>
     <h2>Drawing uniform polyhedra with Javascript, WebGL and THREE.js</h2>
-    <canvas id="demoCanvas" width="480" height="480"></canvas>
+    <canvas id="demoCanvas1" width="480" height="480"></canvas>
+    <canvas id="demoCanvas2" width="480" height="480"></canvas>
     <script src="js/three.min.js"></script> 
     <script src="js/OrbitControls.js"></script> 
     <script src="js/geometry.js"></script> 
     <script src="js/main.js"></script>
     <script>
       (function() {
-       var options = "args=3:2:5/3&sym=3:2:2&colorstyle=1&t=7&tour=1&dorotate&run";
-       runOnCanvas(demoCanvas,options,demoCanvas.width,demoCanvas.height);
+      var options1 = "args=3:2:5/3&sym=3:2:2&colorstyle=1&t=7&tour=1&dorotate&run";
+      var context1 = new Context(options1);
+      runOnCanvas(demoCanvas1,context1,demoCanvas1.width,demoCanvas1.height);
+      var options2 = "args=3:2:5/3&colorstyle=3&z=8&tour=1&t=7&dual&dorotate&run";
+      var context2 = new Context(options2);
+      runOnCanvas(demoCanvas2,context2,demoCanvas2.width,demoCanvas2.height);
       } ())
     </script>
     <p>
