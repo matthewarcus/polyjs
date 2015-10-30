@@ -84,6 +84,8 @@ function Context(options) {
                 context.dosnubify = true;
             } else if (matches = arg.match(/^stellate$/)) {
                 context.dostellate = true;
+            } else if (matches = arg.match(/^both$/)) {
+                context.drawtype = 1;
             } else if (matches = arg.match(/^dual$/)) {
                 context.drawtype = 2;
             } else if (matches = arg.match(/^invert$/)) {
