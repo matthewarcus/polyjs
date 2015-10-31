@@ -316,7 +316,7 @@ function drawregions(context)
                     // centre of the snub triangle for the face.
                     var adj = adjacent[i][(j+2)%3];
                     plist.push(schwarz.applybary(snubcentre,adj));
-                } else if (context.regionstyle == 1) {
+                } else if (context.regionstyle == 0) {
                     // Add in edge points for "correct" inversion
                     var edgecentre = schwarz.applybary(facedata.edgecentres[j],i);
                     plist.push(edgecentre);
