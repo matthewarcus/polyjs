@@ -19,7 +19,7 @@
     <script>
       function run(canvas,options) {
         var context = new Context(options);
-        runOnCanvas(canvas,context,canvas.width,canvas.height);
+        context.runOnCanvas(canvas,canvas.width,canvas.height);
       }
       run(canvas1, "args=3:2:5/3&sym=3:2:2&colorstyle=1&t=7&tour=1&dorotate&run");
       run(canvas2, "args=3:2:5/3&colorstyle=3&z=8&tour=1&t=7&dual&dorotate&run");

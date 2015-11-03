@@ -19,9 +19,10 @@
 // *Explicitly specify trilinear coords
 // *Get rid of global variables
 // *Don't draw degenerate sectors of faces
+// *Modularize
+// *Use proper options object rather than globals
 // Reuse point geometry between compounds
 // Fix snubcentre for degenerate snub triangles
-// Modularize
 // Table driven options
 // Better separation of generation and display
 // Separate logical face structure from display structure
@@ -34,7 +35,6 @@
 // Stellation of duals
 // More generic dual generation
 // Stellation parameters
-// Use proper options object rather than globals
 // Make URL for current scene
 // More compact URL scheme
 // Better colors
@@ -44,203 +44,6 @@
 
 // Our state object.
 function Context(options) {
-
-    this.makeinfostring = function() {
-        // TBD: put more here
-        var s = [];
-        s.push("tri = [" + this.tri + "]");
-        s.push("bary = [" + this.bary + "]");
-        if (this.docompound) {
-            s.push("z = " + this.zrotation);
-        }
-        return s.join("; ");
-    }
-
-    // Given a time t, interpolate between the list of points
-    this.interpolatepoint = function(t,points) {
-        t = t%points.length;
-        if (t < 0) t += points.length;
-        var s = t%1;
-        t = Math.floor(t);
-        var start = points[t];
-        var end = points[(t+1)%points.length];
-        var res = [];
-        for (var i = 0; i < 3; i++) {
-            res[i] = (1-s)*start[i] + s*end[i];
-        }
-        return res;
-    }
-
-    this.makeangles = function(a,b,c,d,e,f) {
-        b = b || 1; d = d || 1; f = f || 1;
-        a = Number(a); b = Number(b);
-        c = Number(c); d = Number(d);
-        e = Number(e); f = Number(f);
-        // Check b/a + d/c + f/e > 1
-        // ie. bce + dea + fac > ace
-        if (a < b || c < d || e < f ||
-            b*c*e + d*e*a + f*a*c <= a*c*e) {
-            alert("Not a Schwarz Triangle");
-        }
-        return [a/b,c/d,e/f];
-    }
-
-    this.processoptions = function(options) {
-        // TBD: A more compact parameter format would be good.
-        var args = options.split('&');
-        var context = this; // Need to see this in the forEach function.
-        args.forEach(function (arg) {
-            //console.log("Doing parameter '" + arg + "'");
-            var matches;
-            if (matches = arg.match(/^args=([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?$/)) {
-                context.angles = context.makeangles(matches[1],matches[2],matches[3],matches[4],matches[5],matches[6]);
-            } else if (matches = arg.match(/^sym=([\d]+):([\d]+):([\d]+)$/)) {
-                context.initsym = context.makeangles(matches[1],1,matches[2],1,matches[3],1);
-            } else if (matches = arg.match(/^tri=([\d.]+):([\d.]+):([\d.]+)$/)) {
-                context.tours[0].push([Number(matches[1]),Number(matches[2]),Number(matches[3])]);
-                context.tournum = 0;
-            } else if (matches = arg.match(/^zrot=([\d]+)$/)) {
-                context.zrotation = Math.PI/Number(matches[1]);
-            } else if (matches = arg.match(/^zrot=([\d]+.[\d]+)$/)) {
-                context.zrotation = Number(matches[1]);
-            } else if (matches = arg.match(/^colorstyle=([\d]+)$/)) {
-                context.colorstyle = Number(matches[1]);
-            } else if (matches = arg.match(/^hide=([\d]+)$/)) {
-                context.hideface[Number(matches[1])-1] = true;
-            } else if (matches = arg.match(/^t=([\d.]+)$/)) {
-                context.initt = Number(matches[1]);
-            } else if (matches = arg.match(/^z=([\d.]+)$/)) {
-                context.initz = Number(matches[1]);
-            } else if (matches = arg.match(/^tridepth=([\d]+)$/)) {
-                context.tridepth = Number(matches[1]);
-            } else if (matches = arg.match(/^tour=([\d]+)$/)) {
-                context.tournum = Number(matches[1]);
-            } else if (matches = arg.match(/^compound$/)) {
-                context.docompound = true;
-            } else if (matches = arg.match(/^snub$/)) {
-                context.dosnubify = true;
-            } else if (matches = arg.match(/^stellate$/)) {
-                context.dostellate = true;
-            } else if (matches = arg.match(/^both$/)) {
-                context.drawtype = 1;
-            } else if (matches = arg.match(/^dual$/)) {
-                context.drawtype = 2;
-            } else if (matches = arg.match(/^invert$/)) {
-                context.invertinc = -context.invertinc;
-                context.ifact = 1;
-            } else if (matches = arg.match(/^dozrot$/)) {
-                context.dozrot = true;
-            } else if (matches = arg.match(/^dorotonly$/)) {
-                context.dorotonly = true;
-            } else if (matches = arg.match(/^dorotate$/)) {
-                context.dorotate = true;
-            } else if (matches = arg.match(/^hemi$/)) {
-                context.dohemi = true;
-            } else if (matches = arg.match(/^run$/)) {
-                context.initrunning = true;
-            } else {
-                console.log("Ignoring parameter '" + arg + "'");
-            }
-        });
-        if (this.tours[0].length == 0) {
-            this.tours[0].push([1,1,1]);
-        }
-    }
-    this.handleKey = function(key) {
-        var handled = true;
-        switch(key) {
-        case ' ':
-            this.stopwatch.toggle();
-            break;
-        case 'z':
-            this.dozrot = !this.dozrot;
-            break;
-        case 'a':
-            this.zrotation = 0;
-            break;
-        case '[':
-            this.stopwatch.incTime(-1);
-            break;
-        case ']':
-            this.stopwatch.incTime(1);
-            break;
-        case 'p':
-            this.stopwatch.setTime(0);
-            break;
-        case 'r':
-            this.dorotate = !this.dorotate;
-            break;
-        case 'h':
-            this.dohemi = !this.dohemi;
-            break;
-        case 's':
-            this.dosnubify = !this.dosnubify;
-            break;
-        case 'q':
-            this.dostellate = !this.dostellate;
-            break;
-        case 'e':
-            this.explode += 1/16;
-            break;
-        case 'w':
-            this.explode -= 1/16;
-            break;
-        case 'd':
-            this.drawtype = (this.drawtype+1)%3
-            break;
-        case 'n':
-            this.donormalize = !this.donormalize;
-            break;
-        case 'i':
-            this.invertinc = -this.invertinc;
-            break;
-        case 'f':
-            this.colorstyle = (this.colorstyle+1) % this.numcolorstyles;
-            this.geometry.colorsNeedUpdate = true;
-            break;
-        case 't':
-            this.tournum = (this.tournum+1)%this.tours.length;
-            this.stopwatch.setTime(0);
-            break;
-        case 'u':
-            this.rotatecolors();
-            this.geometry.colorsNeedUpdate = true;
-            break;
-        case 'c':
-            this.docompound = !this.docompound;
-            break;
-        case 'x':
-            this.dorotonly = !this.dorotonly;
-            break;
-        case '=':
-            this.tridepth = this.tridepth+1;
-            break;
-        case '-':
-            if (this.tridepth > 0) this.tridepth = this.tridepth-1;
-            break;
-        case 'y':
-            this.regionstyle = (this.regionstyle+1)%2;
-            break;
-        case '?':
-            alert(this.makeinfostring());
-            break;
-        case '1':
-            this.hideface[0] = !this.hideface[0];
-            break;
-        case '2':
-            this.hideface[1] = !this.hideface[1];
-            break;
-        case '3':
-            this.hideface[2] = !this.hideface[2];
-            break;
-        case '4':
-            this.hideface[3] = !this.hideface[3];
-            break;
-        default:
-            handled = false;
-        }
-        return handled;
-    }
     // Options, modifiable during runtime
     this.dostellate = false;
     this.dosnubify = false;
@@ -282,34 +85,234 @@ function Context(options) {
     this.processoptions(options);
 }
 
-function Stopwatch(init,step,running) {
+Context.prototype.Stopwatch = function(init,step,running) {
     // When running, reported time is difference between Date.now()
     // and stored time. When stopped, reported time is just the
     // stored time.
-    this.toggle = function() { 
-        this.running = !this.running;
-        this.time = Date.now()-this.time;
-    }
-    this.setTime = function(t) { 
-        if (this.running) this.time = Date.now()-t*this.scale;
-        else this.time = t*this.scale;
-    }
-    this.incTime = function(t) { 
-        if (this.running) {
-            this.time -= t*this.scale;
-        } else {
-            // Apply increment and step to next position
-            this.time += t*this.scale;
-            this.time = this.scale*(Math.floor(this.time/this.scale));
-        }
-    }
-    this.getTime = function() { 
-        if (this.running) return (Date.now()-this.time)/this.scale;
-        else return this.time/this.scale;
-    }
     this.running = running;
     this.scale = step*1000;  // Return time in seconds
     this.setTime(init || 0); // Different semantics in running and non-running states
+}
+
+Context.prototype.Stopwatch.prototype.toggle = function() { 
+    this.running = !this.running;
+    this.time = Date.now()-this.time;
+}
+Context.prototype.Stopwatch.prototype.setTime = function(t) { 
+    if (this.running) this.time = Date.now()-t*this.scale;
+    else this.time = t*this.scale;
+}
+Context.prototype.Stopwatch.prototype.incTime = function(t) { 
+    if (this.running) {
+        this.time -= t*this.scale;
+    } else {
+        // Apply increment and step to next position
+        this.time += t*this.scale;
+        this.time = this.scale*(Math.floor(this.time/this.scale));
+    }
+}
+
+Context.prototype.Stopwatch.prototype.getTime = function() {
+    if (this.running) return (Date.now()-this.time)/this.scale;
+    else return this.time/this.scale;
+}
+
+Context.prototype.makeinfostring = function() {
+    // TBD: put more here
+    var s = [];
+    s.push("tri = [" + this.tri + "]");
+    s.push("bary = [" + this.bary + "]");
+    if (this.docompound) {
+        s.push("z = " + this.zrotation);
+    }
+    return s.join("; ");
+}
+
+// Given a time t, interpolate between the list of points
+Context.prototype.interpolatepoint = function(t,points) {
+    t = t%points.length;
+    if (t < 0) t += points.length;
+    var s = t%1;
+    t = Math.floor(t);
+    var start = points[t];
+    var end = points[(t+1)%points.length];
+    var res = [];
+    for (var i = 0; i < 3; i++) {
+        res[i] = (1-s)*start[i] + s*end[i];
+    }
+    return res;
+}
+
+Context.prototype.makeangles = function(a,b,c,d,e,f) {
+    b = b || 1; d = d || 1; f = f || 1;
+    a = Number(a); b = Number(b);
+    c = Number(c); d = Number(d);
+    e = Number(e); f = Number(f);
+    // Check b/a + d/c + f/e > 1
+    // ie. bce + dea + fac > ace
+    if (a < b || c < d || e < f ||
+        b*c*e + d*e*a + f*a*c <= a*c*e) {
+        alert("Not a Schwarz Triangle");
+    }
+    return [a/b,c/d,e/f];
+}
+
+Context.prototype.processoptions = function(options) {
+    // TBD: A more compact parameter format would be good.
+    var args = options.split('&');
+    var context = this; // Need to see this in the forEach function.
+    args.forEach(function (arg) {
+        //console.log("Doing parameter '" + arg + "'");
+        var matches;
+        if (matches = arg.match(/^args=([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?$/)) {
+            context.angles = context.makeangles(matches[1],matches[2],matches[3],matches[4],matches[5],matches[6]);
+        } else if (matches = arg.match(/^sym=([\d]+):([\d]+):([\d]+)$/)) {
+            context.initsym = context.makeangles(matches[1],1,matches[2],1,matches[3],1);
+        } else if (matches = arg.match(/^tri=([\d.]+):([\d.]+):([\d.]+)$/)) {
+            context.tours[0].push([Number(matches[1]),Number(matches[2]),Number(matches[3])]);
+            context.tournum = 0;
+        } else if (matches = arg.match(/^zrot=([\d]+)$/)) {
+            context.zrotation = Math.PI/Number(matches[1]);
+        } else if (matches = arg.match(/^zrot=([\d]+.[\d]+)$/)) {
+            context.zrotation = Number(matches[1]);
+        } else if (matches = arg.match(/^colorstyle=([\d]+)$/)) {
+            context.colorstyle = Number(matches[1]);
+        } else if (matches = arg.match(/^hide=([\d]+)$/)) {
+            context.hideface[Number(matches[1])-1] = true;
+        } else if (matches = arg.match(/^t=([\d.]+)$/)) {
+            context.initt = Number(matches[1]);
+        } else if (matches = arg.match(/^z=([\d.]+)$/)) {
+            context.initz = Number(matches[1]);
+        } else if (matches = arg.match(/^tridepth=([\d]+)$/)) {
+            context.tridepth = Number(matches[1]);
+        } else if (matches = arg.match(/^tour=([\d]+)$/)) {
+            context.tournum = Number(matches[1]);
+        } else if (matches = arg.match(/^compound$/)) {
+            context.docompound = true;
+        } else if (matches = arg.match(/^snub$/)) {
+            context.dosnubify = true;
+        } else if (matches = arg.match(/^stellate$/)) {
+            context.dostellate = true;
+        } else if (matches = arg.match(/^both$/)) {
+            context.drawtype = 1;
+        } else if (matches = arg.match(/^dual$/)) {
+            context.drawtype = 2;
+        } else if (matches = arg.match(/^invert$/)) {
+            context.invertinc = -context.invertinc;
+            context.ifact = 1;
+        } else if (matches = arg.match(/^dozrot$/)) {
+            context.dozrot = true;
+        } else if (matches = arg.match(/^dorotonly$/)) {
+            context.dorotonly = true;
+        } else if (matches = arg.match(/^dorotate$/)) {
+            context.dorotate = true;
+        } else if (matches = arg.match(/^hemi$/)) {
+            context.dohemi = true;
+        } else if (matches = arg.match(/^run$/)) {
+            context.initrunning = true;
+        } else {
+            console.log("Ignoring parameter '" + arg + "'");
+        }
+    });
+    if (this.tours[0].length == 0) {
+        this.tours[0].push([1,1,1]);
+    }
+}
+
+Context.prototype.handleKey = function(key) {
+    var handled = true;
+    switch(key) {
+    case ' ':
+        this.stopwatch.toggle();
+        break;
+    case 'z':
+        this.dozrot = !this.dozrot;
+        break;
+    case 'a':
+        this.zrotation = 0;
+        break;
+    case '[':
+        this.stopwatch.incTime(-1);
+        break;
+    case ']':
+        this.stopwatch.incTime(1);
+        break;
+    case 'p':
+        this.stopwatch.setTime(0);
+        break;
+    case 'r':
+        this.dorotate = !this.dorotate;
+        break;
+    case 'h':
+        this.dohemi = !this.dohemi;
+        break;
+    case 's':
+        this.dosnubify = !this.dosnubify;
+        break;
+    case 'q':
+        this.dostellate = !this.dostellate;
+        break;
+    case 'e':
+        this.explode += 1/16;
+        break;
+    case 'w':
+        this.explode -= 1/16;
+        break;
+    case 'd':
+        this.drawtype = (this.drawtype+1)%3
+        break;
+    case 'n':
+        this.donormalize = !this.donormalize;
+        break;
+    case 'i':
+        this.invertinc = -this.invertinc;
+        break;
+    case 'f':
+        this.colorstyle = (this.colorstyle+1) % this.numcolorstyles;
+        this.geometry.colorsNeedUpdate = true;
+        break;
+    case 't':
+        this.tournum = (this.tournum+1)%this.tours.length;
+        this.stopwatch.setTime(0);
+        break;
+    case 'u':
+        this.rotatecolors();
+        this.geometry.colorsNeedUpdate = true;
+        break;
+    case 'c':
+        this.docompound = !this.docompound;
+        break;
+    case 'x':
+        this.dorotonly = !this.dorotonly;
+        break;
+    case '=':
+        this.tridepth = this.tridepth+1;
+        break;
+    case '-':
+        if (this.tridepth > 0) this.tridepth = this.tridepth-1;
+        break;
+    case 'y':
+        this.regionstyle = (this.regionstyle+1)%2;
+        break;
+    case '?':
+        alert(this.makeinfostring());
+        break;
+    case '1':
+        this.hideface[0] = !this.hideface[0];
+        break;
+    case '2':
+        this.hideface[1] = !this.hideface[1];
+        break;
+    case '3':
+        this.hideface[2] = !this.hideface[2];
+        break;
+    case '4':
+        this.hideface[3] = !this.hideface[3];
+        break;
+    default:
+        handled = false;
+    }
+    return handled;
 }
 
 // Finally, draw a point (via. the context.drawpoint0 function).
@@ -318,43 +321,42 @@ function Stopwatch(init,step,running) {
 // (unless we are doing an exploded view).
 // so there is some significant optimizations possible here.
 // Return the index in the geometries list of points.
-function drawpoint(context,p,offset) {
+Context.prototype.drawpoint = function(p,offset) {
     var w = p[3] || 1; // Homogeneous coords
     // For fun, do the explode before the inversion
-    if (context.donormalize) w = Vector.length(p);
-    var ifact = context.ifact;
+    if (this.donormalize) w = Vector.length(p);
+    var ifact = this.ifact;
     if (ifact != 0) {
-        //var q = invert(p,context.midsphere);
-        var k = Vector.dot(p,p)/context.midsphere;
+        //var q = invert(p,this.midsphere);
+        var k = Vector.dot(p,p)/this.midsphere;
         if (ifact == 1) w *= k;
         else w *= (1-ifact)+ifact*k;
     }
     var x = p[0]/w, y = p[1]/w, z = p[2]/w;
-    var explode = context.explode;
+    var explode = this.explode;
     if (offset && explode != 0) {
         x += explode*offset[0];
         y += explode*offset[1];
         z += explode*offset[2];
     }
-    if (context.transmat) {
+    if (this.transmat) {
         p = [x,y,z];
-        x = Vector.dot(context.transmat[0],p);
-        y = Vector.dot(context.transmat[1],p);
-        z = Vector.dot(context.transmat[2],p);
+        x = Vector.dot(this.transmat[0],p);
+        y = Vector.dot(this.transmat[1],p);
+        z = Vector.dot(this.transmat[2],p);
     }
-    return context.drawpoint0(x,y,z);
+    return this.drawpoint0(x,y,z);
 }
 
 // TBD: encapsulate the various drawing options
 // For n > 0, draw a Sierpinski triangle (or some
 // variation thereof).
-function drawtriangle(context,p,q,r,offset,type,i,n)
-{
+Context.prototype.drawtriangle = function(p,q,r,offset,type,i,n) {
     if (n == 0) {
-        var index0 = drawpoint(context,p,offset);
-        var index1 = drawpoint(context,q,offset);
-        var index2 = drawpoint(context,r,offset);
-        context.drawtriangle0(index0,index1,index2,type,i);
+        var index0 = this.drawpoint(p,offset);
+        var index1 = this.drawpoint(q,offset);
+        var index2 = this.drawpoint(r,offset);
+        this.drawtriangle0(index0,index1,index2,type,i);
     } else {
         var p1 = Vector.mid(p,q);
         var q1 = Vector.mid(q,r);
@@ -363,39 +365,37 @@ function drawtriangle(context,p,q,r,offset,type,i,n)
         // k = 0,1,2,3,n%4,random etc.
         //var k = n%4;
         var k = 3;
-        if (k != 0) drawtriangle(context,p,p1,r1,offset,type,i,n-1);
-        if (k != 1) drawtriangle(context,p1,q,q1,offset,type,i,n-1);
-        if (k != 2) drawtriangle(context,r1,q1,r,offset,type,i,n-1);
-        if (k != 3) drawtriangle(context,p1,q1,r1,offset,type,i,n-1);
+        if (k != 0) this.drawtriangle(p,p1,r1,offset,type,i,n-1);
+        if (k != 1) this.drawtriangle(p1,q,q1,offset,type,i,n-1);
+        if (k != 2) this.drawtriangle(r1,q1,r,offset,type,i,n-1);
+        if (k != 3) this.drawtriangle(p1,q1,r1,offset,type,i,n-1);
     }
 }
 
-function drawface(context,centre,plist,facetype,i,tridepth)
-{
-    if (context.drawface0) {
-        context.drawface0(plist);
+Context.prototype.drawface = function(centre,plist,facetype,i,tridepth) {
+    if (this.drawface0) {
+        this.drawface0(plist);
     } else {
         if (plist.length == 3) {
-            drawtriangle(context,
-                         plist[0],plist[1],plist[2],
-                         centre,facetype,i,tridepth);
+            this.drawtriangle(plist[0],plist[1],plist[2],
+                              centre,facetype,i,tridepth);
         } else {
             for (var j = 0; j < plist.length; j++) {
                 var p1 = plist[j];
                 var p2 = plist[(j+1)%plist.length];
                 if (Vector.taxi(p1,p2) > 1e-4) {
-                    drawtriangle(context,centre,p1,p2,
-                                 centre,facetype,i,tridepth);
+                    this.drawtriangle(centre,p1,p2,
+                                      centre,facetype,i,tridepth);
                 }
             }
         }
-        if (context.dohemi) {
+        if (this.dohemi) {
             for (var j = 0; j < plist.length; j++) {
                 var p1 = plist[j];
                 var p2 = plist[(j+1)%plist.length];
                 if (Vector.taxi(p1,p2) > 1e-4) {
-                    drawtriangle(context,[0,0,0],p1,p2,
-                                 centre,4,i,tridepth);
+                    this.drawtriangle([0,0,0],p1,p2,
+                                      centre,4,i,tridepth);
                 }
             }
         }
@@ -403,10 +403,9 @@ function drawface(context,centre,plist,facetype,i,tridepth)
 }
 
 // Draw the Schwarz triangles (fundamental regions) as triangles.
-function drawregions(context)
-{
-    var schwarz = context.schwarz;
-    var facedata = context.facedata;
+Context.prototype.drawregions = function() {
+    var schwarz = this.schwarz;
+    var facedata = this.facedata;
     var points = schwarz.points;
     var regions = schwarz.regions;
     var adjacent = schwarz.adjacent;
@@ -414,42 +413,41 @@ function drawregions(context)
     for (var i = 0; i < regions.length; i++) {
         var region = regions[i];
         var plist = [];
-        if (region[3] == 0 || !context.dosnubify) {
+        if (region[3] == 0 || !this.dosnubify) {
             var snubcentre = facedata.snubcentre;
             for (var j = 0; j < 3; j++) {
                 plist.push(Vector.mul(points[region[j]], facedata.facedistances[j]));
-                if (context.dosnubify && snubcentre) {
+                if (this.dosnubify && snubcentre) {
                     // This isn't the 'regionpoint' but the 'snubpoint' ie. the
                     // centre of the snub triangle for the face.
                     var adj = adjacent[i][(j+2)%3];
                     plist.push(schwarz.applybary(snubcentre,adj));
-                } else if (context.regionstyle == 0) {
+                } else if (this.regionstyle == 0) {
                     // Add in edge points for "correct" inversion
                     var edgecentre = schwarz.applybary(facedata.edgecentres[j],i);
                     plist.push(edgecentre);
                 }
             }
             for (var j = 0; j < plist.length; j++) {
-                plist[j] = invert(plist[j],context.midsphere);
+                plist[j] = invert(plist[j],this.midsphere);
             }
             var facetype = 4+region[3];
-            var centre = invert(regionpoints[i],context.midsphere);
-            drawface(context,centre,plist,facetype,i,context.tridepth)
+            var centre = invert(regionpoints[i],this.midsphere);
+            this.drawface(centre,plist,facetype,i,this.tridepth)
         }
     }
 }
 
-function drawfaces(context)
-{
-    var schwarz = context.schwarz;
-    var facedata = context.facedata;
+Context.prototype.drawfaces = function() {
+    var schwarz = this.schwarz;
+    var facedata = this.facedata;
     var points = schwarz.points;
     var regions = schwarz.regions;
     var regionpoints = facedata.regionpoints;
     // Now go through the facepoint lists for each type of face
     for (var type = 0; type < 3; type++) {
-        if (!facedata.faces[type] || context.hideface[type]) continue;
-        if (context.dostellate) {
+        if (!facedata.faces[type] || this.hideface[type]) continue;
+        if (this.dostellate) {
             var facepoints = schwarz.faces[type];
             for (var i = 0; i < facepoints.length; i++) {
                 var plist = facepoints[i];
@@ -463,7 +461,7 @@ function drawfaces(context)
                         // Triangle from centre to two vertices on plist
                         var p1 = schwarz.applybary(facelines[j][0],plist[0]);
                         var p2 = schwarz.applybary(facelines[j][1],plist[0]);
-                        drawtriangle(context,centre,p1,p2,centre,type,i,context.tridepth);
+                        this.drawtriangle(centre,p1,p2,centre,type,i,this.tridepth);
                     }
                 }
             }
@@ -471,23 +469,23 @@ function drawfaces(context)
             var facepoints = schwarz.faces[type];
             for (var i = 0; i < facepoints.length; i++) {
                 var fpoints = facepoints[i];
-                if (fpoints && (!context.dosnubify || fpoints.length > 4)) {
+                if (fpoints && (!this.dosnubify || fpoints.length > 4)) {
                     // Add a centre vertex, this is a corner of a Schwarz triangle.
                     // facedistances[type] tells us how far it is from the origin (the face
                     // centres, ie. the region points are at distance 1.
                     var centre = Vector.mul(points[i],facedata.facedistances[type]);
                     // For a snub polyhedron, we only include even (+ve) regions.
-                    var inc = context.dosnubify ? 2 : 1;
+                    var inc = this.dosnubify ? 2 : 1;
                     var plist = [];
                     for (var j = 0; j < fpoints.length; j+=inc) {
                         plist.push(regionpoints[fpoints[j]]);
                     }
-                    drawface(context,centre,plist,type,i,context.tridepth);
+                    this.drawface(centre,plist,type,i,this.tridepth);
                 }
             }
         }
     }
-    if (context.dosnubify && !context.dostellate && !context.hideface[3] && facedata.snubcentre) {
+    if (this.dosnubify && !this.dostellate && !this.hideface[3] && facedata.snubcentre) {
         // Now draw a snub triangle for -ve regions
         for (var i = 0; i < regions.length; i++) {
             var t = regions[i];
@@ -496,7 +494,7 @@ function drawfaces(context)
                 var plist = [regionpoints[schwarz.adjacent[i][0]],
                              regionpoints[schwarz.adjacent[i][1]],
                              regionpoints[schwarz.adjacent[i][2]]];
-                drawface(context,centre,plist,3,i,context.tridepth);
+                this.drawface(centre,plist,3,i,this.tridepth);
             }
         }
     }
@@ -505,20 +503,19 @@ function drawfaces(context)
 // Set up context for drawing a polyhedron in the geometry object,
 // based on the fundamental regions info in schwarz, using
 // trilinear coords tri, and with the colorface coloring function.
-function setupcontext(context,tri)
-{
-    context.npoints = 0;
-    context.nfaces = 0;
-    context.needclone = false;
-    context.compound = 0;
-    context.pointset = [];
-    context.transmat = null;
+Context.prototype.setup = function(tri) {
+    this.npoints = 0;
+    this.nfaces = 0;
+    this.needclone = false;
+    this.compound = 0;
+    this.pointset = [];
+    this.transmat = null;
 
-    var schwarz = context.schwarz;
+    var schwarz = this.schwarz;
     var regions = schwarz.regions;
     var points = schwarz.points;
     // Convert trilinear coords to barycentric.
-    if (!context.dosnubify) {
+    if (!this.dosnubify) {
         var bary = schwarz.tri2bary(tri);
     } else {
         // For snub polyhedra, we use a bary coord so
@@ -531,61 +528,59 @@ function setupcontext(context,tri)
         bary = Vector.div(bary,Vector.length(s));
     }
     var facedata = makefacedata(schwarz,bary);
-    if (context.docompound) {
+    if (this.docompound) {
         var regionpoints = facedata.regionpoints;
         // Set up the initial pointset (for compound generation).
         var pointset = [];
         for (var i = 0; i < regionpoints.length; i++) {
-            if (!context.dosnubify || regions[i][3] == 0) {
+            if (!this.dosnubify || regions[i][3] == 0) {
                 setadd(regionpoints[i],pointset,1e-6);
             }
         }
         setsort(pointset);
-        context.pointset = pointset;
+        this.pointset = pointset;
     }
-    context.tri = tri
-    context.bary = bary
-    context.facedata = facedata;
-    if (context.dosnubify) {
-        context.midsphere = facedata.snubsphere;
+    this.tri = tri
+    this.bary = bary
+    this.facedata = facedata;
+    if (this.dosnubify) {
+        this.midsphere = facedata.snubsphere;
     } else {
-        context.midsphere = facedata.midsphere;
+        this.midsphere = facedata.midsphere;
     }
-    if (context.dostellate) {
-        stellate(schwarz,facedata, context.hideface);
+    if (this.dostellate) {
+        stellate(schwarz,facedata, this.hideface);
     }
 }
 
-function drawpolyhedron(context)
-{
+Context.prototype.drawpolyhedron = function() {
     // Do the actual drawing
-    if (context.drawtype <= 1) drawfaces(context);
-    if (context.drawtype >= 1) drawregions(context);
+    if (this.drawtype <= 1) this.drawfaces();
+    if (this.drawtype >= 1) this.drawregions();
 }
 
-function drawcompound(context,tripoint)
-{
+Context.prototype.drawcompound = function(tripoint) {
     // We use a group word to describe a particular transformation
     var gens = ["P","Q","R"];
     var rgens = ["PQ","QR","RP"];
 
-    setupcontext(context, tripoint); // Make basic polyhedron
-    drawpolyhedron(context);
-    if (context.docompound) {
+    this.setup(tripoint); // Make basic polyhedron
+    this.drawpolyhedron();
+    if (this.docompound) {
         // Set up for compounding
-        var ip = Vector.zrot(context.symmetry[0], context.zrotation);
-        var iq = Vector.zrot(context.symmetry[1], context.zrotation);
-        var ir = Vector.zrot(context.symmetry[2], context.zrotation);
+        var ip = Vector.zrot(this.symmetry[0], this.zrotation);
+        var iq = Vector.zrot(this.symmetry[1], this.zrotation);
+        var ir = Vector.zrot(this.symmetry[2], this.zrotation);
         // Now we do a transitive closure operation. Keep a list of sets of
         // points, pull sets out and apply all basic operations (from the
         // symmetry group), add back in any sets we haven't previously seen.
         // Initially we just know about the basic pointset just generated.
-        var pointsets = [{trans: "", pointset: context.pointset}];
+        var pointsets = [{trans: "", pointset: this.pointset}];
         for (var pindex = 0, count = 0;
              pindex != pointsets.length && count < 200;
              pindex++, count++) {
             var entry = pointsets[pindex];
-            var ops = context.dorotonly ? rgens : gens; // Rotation only or all operations?
+            var ops = this.dorotonly ? rgens : gens; // Rotation only or all operations?
             for (var i = 0; i < ops.length; i++) {
                 var newset = mapply(ops[i],entry.pointset,ip,iq,ir);
                 setsort(newset);
@@ -595,7 +590,7 @@ function drawcompound(context,tripoint)
                 for (var j = 0; j < pointsets.length; j++) {
                     // If we care about chirality (ie. are generating a snub figure)
                     // then don't consider reflected pointsets the same).
-                    if (context.dosnubify && pointsets[j].trans.length%2 != parity) continue;
+                    if (this.dosnubify && pointsets[j].trans.length%2 != parity) continue;
                     if (setequal(newset,pointsets[j].pointset,1e-6)) {
                         seen = true;
                         break;
@@ -606,9 +601,9 @@ function drawcompound(context,tripoint)
                     // TBD: we could just reuse the geometry with a rotation
                     // and a change of color.
                     var newtrans = entry.trans + ops[i];
-                    context.transmat = makematrix(newtrans,ip,iq,ir);
-                    context.compound++;
-                    drawpolyhedron(context);
+                    this.transmat = makematrix(newtrans,ip,iq,ir);
+                    this.compound++;
+                    this.drawpolyhedron();
                     pointsets.push({trans: newtrans, pointset: newset});
                 }
             }
@@ -616,8 +611,8 @@ function drawcompound(context,tripoint)
     }
 }
 
-function runOnCanvas(canvas,context,width,height) {
-
+Context.prototype.runOnCanvas = function(canvas,width,height) {
+    var context = this; // For benefit of subfunctions
     // http://stackoverflow.com/questions/9899807/three-js-detect-webgl-support-and-fallback-to-regular-canvas
     function webglAvailable(canvas) {
         try {
@@ -635,7 +630,7 @@ function runOnCanvas(canvas,context,width,height) {
 
     var geometry = new THREE.Geometry();
     geometry.dynamic = true;
-    context.geometry = geometry;
+    this.geometry = geometry;
     
     var scene = new THREE.Scene(); 
     var mesh = new THREE.Mesh(geometry, material);
@@ -652,21 +647,21 @@ function runOnCanvas(canvas,context,width,height) {
     scene.add(light);
 
     var params = { canvas: canvas, antialias: true };
-    context.renderer =
+    this.renderer =
         (webglAvailable(canvas)) ? 
         new THREE.WebGLRenderer(params) : 
         new THREE.CanvasRenderer(params);
-    context.renderer.setSize(width,height); 
+    this.renderer.setSize(width,height); 
 
-    context.camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000); 
-    context.camera.position.z = context.initz; 
+    this.camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000); 
+    this.camera.position.z = this.initz; 
 
-    var controls = new THREE.OrbitControls( context.camera, canvas );
+    var controls = new THREE.OrbitControls( this.camera, canvas );
 
     // Keep track of time
-    context.stopwatch = new Stopwatch(context.initt,
-                                      context.animstep,
-                                      context.initrunning);
+    this.stopwatch = new this.Stopwatch(this.initt,
+                                        this.animstep,
+                                        this.initrunning);
 
     // Set this if next display loop should recompute geometry
     var needupdate = true;
@@ -682,7 +677,7 @@ function runOnCanvas(canvas,context,width,height) {
     var white = new THREE.Color(0xffffff);
     var black = new THREE.Color(0x000000);
 
-    context.rotatecolors = function() {
+    this.rotatecolors = function() {
         function rot(a) {
             var t = a[0];
             for (var i = 0; i < a.length-1; i++) {
@@ -694,9 +689,9 @@ function runOnCanvas(canvas,context,width,height) {
         rot(faceColors);
     }
 
-    context.numcolorstyles = 6;
+    this.numcolorstyles = 6;
     var vertexcolorstyle = 3;
-    context.colorface = function(face,type,index,compound) {
+    this.colorface = function(face,type,index,compound) {
         //face.color = null;
         //face.vertexColors = null;
         var colorstyle = this.colorstyle;
@@ -717,7 +712,7 @@ function runOnCanvas(canvas,context,width,height) {
         }
     }
 
-    context.drawpoint0 = function (x,y,z) {
+    this.drawpoint0 = function (x,y,z) {
         // If we need to add new points to the geometry
         // make sure that we redraw properly.
         if (this.npoints == this.geometry.vertices.length) {
@@ -729,7 +724,7 @@ function runOnCanvas(canvas,context,width,height) {
         return this.npoints++;
     }
 
-    context.drawtriangle0 = function(a,b,c,type,index) {
+    this.drawtriangle0 = function(a,b,c,type,index) {
         if (this.nfaces == this.geometry.faces.length) {
             this.geometry.faces.push(new THREE.Face3());
             this.needclone = true;
@@ -754,15 +749,15 @@ function runOnCanvas(canvas,context,width,height) {
     // Set up constant aspects of polyhedra generation
     // schwarz has all the details about the particular set of
     // fundamental regions we are working with.
-    context.schwarz = new Schwarz(context.angles);
-    //context.schwarz.describe(false);
+    this.schwarz = new Schwarz(this.angles);
+    //this.schwarz.describe(false);
 
-    var sym = makesymmetry(context.initsym);
-    context.symmetry = [Vector.normalize(Vector.cross(sym[1],sym[2])),
+    var sym = makesymmetry(this.initsym);
+    this.symmetry = [Vector.normalize(Vector.cross(sym[1],sym[2])),
                         Vector.normalize(Vector.cross(sym[2],sym[0])),
                         Vector.normalize(Vector.cross(sym[0],sym[1]))];
 
-    var render = function () { 
+    var render = function () {
         // Only need to render at 30fps
         setTimeout(function() {
             requestAnimationFrame( render );
@@ -776,7 +771,7 @@ function runOnCanvas(canvas,context,width,height) {
             }
             var points = context.tours[context.tournum%context.tours.length];
             var tripoint = context.interpolatepoint(context.stopwatch.getTime(), points);
-            drawcompound(context, tripoint);
+            context.drawcompound(tripoint);
             // Post process...
             geometry.computeFaceNormals();
             geometry.verticesNeedUpdate = true;
@@ -832,7 +827,8 @@ function runOnCanvas(canvas,context,width,height) {
     render(0); 
 }
 
-function runOnWindow() {
+// Static function, access through prototype.
+Context.prototype.runOnWindow = function() {
     var options = window.location.search;
     if (options.length > 0) {
         // Strip off leading '?'
@@ -853,5 +849,5 @@ function runOnWindow() {
             context.camera.updateProjectionMatrix();
         }
     });
-    runOnCanvas(canvas,context,width,height);
+    context.runOnCanvas(canvas,width,height);
 }
