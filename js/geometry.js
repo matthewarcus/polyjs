@@ -30,7 +30,14 @@ var Vector = {
             var t = u[i]-v[i];
             s += t*t;
         }
-        return Math.sqrt(s)
+        return Math.sqrt(s);
+    },
+    taxi: function(u,v) {
+        var s = 0;
+        for (var i = 0; i < u.length; i++) {
+            s += Math.abs(u[i]-v[i]);
+        }
+        return s;
     },
     mid: function(u,v) {
         var w = new Array(u.length);
@@ -84,10 +91,8 @@ var Vector = {
         }
     },
     approxeq: function(u,v,eps) {
-        if (!eps) console.log("Invalid eps");
-        console.assert(u.length == v.length,
-                       "Incompatible array lengths");
-        var diff = 0;
+        //console.assert(eps);
+        //console.assert(u.length == v.length, "Incompatible array lengths");
         for (var i = 0; i < u.length; i++) {
             if (Math.abs(u[i] - v[i]) > eps) return false;
         }
@@ -175,8 +180,7 @@ var Vector = {
     }
 }
 
-function makesymmetry(angles)
-{
+function makesymmetry(angles) {
     // Spherical triangle cosine rule
     function cosine (A,B,C)
     {
@@ -210,18 +214,17 @@ function makesymmetry(angles)
     return triangle1(t[0],t[1],t[2]);
 }
 
-function Params(angles)
-{
-    var t = makesymmetry(angles);
-    if (!t) return null;
-    var p = t[0], q = t[1], r = t[2];
-    this.p = p; this.q = q; this.r = r; 
-    this.P = Vector.getbary(p,q,r,Vector.reflect(q,r,p));
-    this.Q = Vector.getbary(p,q,r,Vector.reflect(r,p,q));
-    this.R = Vector.getbary(p,q,r,Vector.reflect(p,q,r));
-}
-
 function Schwarz(angles) {
+    function Params(angles) {
+        var t = makesymmetry(angles);
+        if (!t) return null;
+        var p = t[0], q = t[1], r = t[2];
+        this.p = p; this.q = q; this.r = r; 
+        this.P = Vector.getbary(p,q,r,Vector.reflect(q,r,p));
+        this.Q = Vector.getbary(p,q,r,Vector.reflect(r,p,q));
+        this.R = Vector.getbary(p,q,r,Vector.reflect(p,q,r));
+    }
+
     var params = new Params(angles);
     var points = [params.p,params.q,params.r];
     var regions = [[0,1,2,0]];
@@ -356,8 +359,7 @@ function Schwarz(angles) {
 
 // Find bary coords of point whose 3 reflections form an equilateral triangle.
 // Fairly standard application of 2-dimensional Newton-Raphson.
-function getsnub(p,q,r)
-{
+function getsnub(p,q,r) {
     // Solve f(a,b,c) = g(a,b,c) = h(a,b,c)
     // Here f,g,h are distances to 3 sides of triangle. a,b,c are bary coords
     // In fact, we can set a+b+c = 1, so only 2 variables really.
@@ -549,11 +551,17 @@ function makefacedata(schwarz, bary)
     var snubcentre = null;
     var norm = Vector.cross(Vector.sub(s1,s0),Vector.sub(s2,s0));
     var normlen = Vector.length(norm);
-    if (normlen > eps) {
+    //console.log(normlen+" "+s0+" "+s1+" "+s2);
+    if (normlen < eps) {
+        // If the triangle is degenerate, the calculation fails.
+        // TBD: find a suitable approximation
+        console.log("Snubcentre failure for [" + bary + "]");
+    } else {
         norm = Vector.normalize(norm);
         norm = Vector.mul(norm,Vector.dot(s0,norm));
         snubcentre = Vector.getbary(p,q,r,norm);
     }
+
     // Taking the middle edge seems to give good results
     var snubsphere = Math.max(Vector.dot(Vector.mid(s0,s1)),
                               Math.min(Vector.dot(Vector.mid(s1,s2)),
@@ -714,7 +722,6 @@ function test() {
         [3/2,5/4,5/4],
         [5/4,5/4,5/4],
     ];
-
     for (var i = 0; i < triangles.length; i++) {
         console.log((i+1) + ":")
         console.log(triangles[i])
@@ -733,7 +740,6 @@ function test() {
         console.log(schwarz.snuba)
         var schwarz = new Schwarz([c,b,a]);
         console.log(schwarz.snuba)
-
     }
 }
 

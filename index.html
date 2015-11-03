@@ -5,14 +5,17 @@
   </head> 
   <body>
     <h2>Drawing uniform polyhedra with Javascript, WebGL and THREE.js</h2>
+    <style>
+      canvas { background: black; }
+    </style> 
     <script src="js/three.min.js"></script> 
     <script src="js/OrbitControls.js"></script> 
     <script src="js/geometry.js"></script> 
     <script src="js/main.js"></script>
-    <canvas id="canvas1" width="480" height="480"></canvas>
-    <canvas id="canvas2" width="480" height="480"></canvas>
-    <canvas id="canvas3" width="480" height="480"></canvas>
-    <canvas id="canvas4" width="480" height="480"></canvas>
+    <canvas id="canvas1" height="400" width="400"></canvas>
+    <canvas id="canvas2" height="400" width="400"></canvas>
+    <canvas id="canvas3" height="400" width="400"></canvas>
+    <canvas id="canvas4" height="400" width="400"></canvas>
     <script>
       function run(canvas,options) {
         var context = new Context(options);
@@ -21,7 +24,7 @@
       run(canvas1, "args=3:2:5/3&sym=3:2:2&colorstyle=1&t=7&tour=1&dorotate&run");
       run(canvas2, "args=3:2:5/3&colorstyle=3&z=8&tour=1&t=7&dual&dorotate&run");
       run(canvas3, "args=2:3:3&sym=2:3:5&compound&dorotonly&zrot=4&dorotate&tour=1&run");
-      run(canvas4, "args=2:2:37/19&sym=3:2:4&colorstyle=3&&snub&both&dorotate&run");
+      run(canvas4, "args=2:2:37/19&sym=3:2:4&colorstyle=3&snub&both&dorotate&run");
     </script>
     <p>
     <a href="https://github.com/matthewarcus/polyjs/">Source on Github</a>
