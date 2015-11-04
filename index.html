@@ -18,7 +18,7 @@
     <canvas id="canvas4" height="400" width="400"></canvas>
     <script>
       function run(canvas,options) {
-        var context = new Context(options);
+        var context = new PolyContext(options);
         context.runOnCanvas(canvas,canvas.width,canvas.height);
       }
       run(canvas1, "args=3:2:5/3&sym=3:2:2&colorstyle=1&t=7&tour=1&dorotate&run");

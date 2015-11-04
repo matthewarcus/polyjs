@@ -532,6 +532,7 @@ function makefacedata(schwarz, bary)
     var s2 = Vector.reflect(p,q,s);
     // Take triple product of both kinds of face triangle.
     // If both are zero, then face is degenerate.
+    // FIXME: please explain this
     // TBD: If one is zero, we can omit that sector in drawing face
     var t0 = Math.abs(Vector.triple(p,s,s1)) + Math.abs(Vector.triple(p,s,s2));
     var t1 = Math.abs(Vector.triple(q,s,s0)) + Math.abs(Vector.triple(q,s,s2));

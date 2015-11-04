@@ -43,7 +43,7 @@
 // The Fourth Dimension
 
 // Our state object.
-function Context(options) {
+function PolyContext(options) {
     // Options, modifiable during runtime
     this.dostellate = false;
     this.dosnubify = false;
@@ -85,7 +85,7 @@ function Context(options) {
     this.processoptions(options);
 }
 
-Context.prototype.Stopwatch = function(init,step,running) {
+PolyContext.prototype.Stopwatch = function(init,step,running) {
     // When running, reported time is difference between Date.now()
     // and stored time. When stopped, reported time is just the
     // stored time.
@@ -94,15 +94,15 @@ Context.prototype.Stopwatch = function(init,step,running) {
     this.setTime(init || 0); // Different semantics in running and non-running states
 }
 
-Context.prototype.Stopwatch.prototype.toggle = function() { 
+PolyContext.prototype.Stopwatch.prototype.toggle = function() { 
     this.running = !this.running;
     this.time = Date.now()-this.time;
 }
-Context.prototype.Stopwatch.prototype.setTime = function(t) { 
+PolyContext.prototype.Stopwatch.prototype.setTime = function(t) { 
     if (this.running) this.time = Date.now()-t*this.scale;
     else this.time = t*this.scale;
 }
-Context.prototype.Stopwatch.prototype.incTime = function(t) { 
+PolyContext.prototype.Stopwatch.prototype.incTime = function(t) { 
     if (this.running) {
         this.time -= t*this.scale;
     } else {
@@ -112,12 +112,12 @@ Context.prototype.Stopwatch.prototype.incTime = function(t) {
     }
 }
 
-Context.prototype.Stopwatch.prototype.getTime = function() {
+PolyContext.prototype.Stopwatch.prototype.getTime = function() {
     if (this.running) return (Date.now()-this.time)/this.scale;
     else return this.time/this.scale;
 }
 
-Context.prototype.makeinfostring = function() {
+PolyContext.prototype.makeinfostring = function() {
     // TBD: put more here
     var s = [];
     s.push("tri = [" + this.tri + "]");
@@ -129,7 +129,7 @@ Context.prototype.makeinfostring = function() {
 }
 
 // Given a time t, interpolate between the list of points
-Context.prototype.interpolatepoint = function(t,points) {
+PolyContext.prototype.interpolatepoint = function(t,points) {
     t = t%points.length;
     if (t < 0) t += points.length;
     var s = t%1;
@@ -143,7 +143,7 @@ Context.prototype.interpolatepoint = function(t,points) {
     return res;
 }
 
-Context.prototype.makeangles = function(a,b,c,d,e,f) {
+PolyContext.prototype.makeangles = function(a,b,c,d,e,f) {
     b = b || 1; d = d || 1; f = f || 1;
     a = Number(a); b = Number(b);
     c = Number(c); d = Number(d);
@@ -157,7 +157,7 @@ Context.prototype.makeangles = function(a,b,c,d,e,f) {
     return [a/b,c/d,e/f];
 }
 
-Context.prototype.processoptions = function(options) {
+PolyContext.prototype.processoptions = function(options) {
     // TBD: A more compact parameter format would be good.
     var args = options.split('&');
     var context = this; // Need to see this in the forEach function.
@@ -219,7 +219,7 @@ Context.prototype.processoptions = function(options) {
     }
 }
 
-Context.prototype.handleKey = function(key) {
+PolyContext.prototype.handleKey = function(key) {
     var handled = true;
     switch(key) {
     case ' ':
@@ -321,7 +321,7 @@ Context.prototype.handleKey = function(key) {
 // (unless we are doing an exploded view).
 // so there is some significant optimizations possible here.
 // Return the index in the geometries list of points.
-Context.prototype.drawpoint = function(p,offset) {
+PolyContext.prototype.drawpoint = function(p,offset) {
     var w = p[3] || 1; // Homogeneous coords
     // For fun, do the explode before the inversion
     if (this.donormalize) w = Vector.length(p);
@@ -351,7 +351,7 @@ Context.prototype.drawpoint = function(p,offset) {
 // TBD: encapsulate the various drawing options
 // For n > 0, draw a Sierpinski triangle (or some
 // variation thereof).
-Context.prototype.drawtriangle = function(p,q,r,offset,type,i,n) {
+PolyContext.prototype.drawtriangle = function(p,q,r,offset,type,i,n) {
     if (n == 0) {
         var index0 = this.drawpoint(p,offset);
         var index1 = this.drawpoint(q,offset);
@@ -372,7 +372,7 @@ Context.prototype.drawtriangle = function(p,q,r,offset,type,i,n) {
     }
 }
 
-Context.prototype.drawface = function(centre,plist,facetype,i,tridepth) {
+PolyContext.prototype.drawface = function(centre,plist,facetype,i,tridepth) {
     if (this.drawface0) {
         this.drawface0(plist);
     } else {
@@ -403,7 +403,7 @@ Context.prototype.drawface = function(centre,plist,facetype,i,tridepth) {
 }
 
 // Draw the Schwarz triangles (fundamental regions) as triangles.
-Context.prototype.drawregions = function() {
+PolyContext.prototype.drawregions = function() {
     var schwarz = this.schwarz;
     var facedata = this.facedata;
     var points = schwarz.points;
@@ -438,7 +438,7 @@ Context.prototype.drawregions = function() {
     }
 }
 
-Context.prototype.drawfaces = function() {
+PolyContext.prototype.drawfaces = function() {
     var schwarz = this.schwarz;
     var facedata = this.facedata;
     var points = schwarz.points;
@@ -503,7 +503,7 @@ Context.prototype.drawfaces = function() {
 // Set up context for drawing a polyhedron in the geometry object,
 // based on the fundamental regions info in schwarz, using
 // trilinear coords tri, and with the colorface coloring function.
-Context.prototype.setup = function(tri) {
+PolyContext.prototype.setup = function(tri) {
     this.npoints = 0;
     this.nfaces = 0;
     this.needclone = false;
@@ -553,13 +553,13 @@ Context.prototype.setup = function(tri) {
     }
 }
 
-Context.prototype.drawpolyhedron = function() {
+PolyContext.prototype.drawpolyhedron = function() {
     // Do the actual drawing
     if (this.drawtype <= 1) this.drawfaces();
     if (this.drawtype >= 1) this.drawregions();
 }
 
-Context.prototype.drawcompound = function(tripoint) {
+PolyContext.prototype.drawcompound = function(tripoint) {
     // We use a group word to describe a particular transformation
     var gens = ["P","Q","R"];
     var rgens = ["PQ","QR","RP"];
@@ -611,7 +611,7 @@ Context.prototype.drawcompound = function(tripoint) {
     }
 }
 
-Context.prototype.runOnCanvas = function(canvas,width,height) {
+PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
     var context = this; // For benefit of subfunctions
     // http://stackoverflow.com/questions/9899807/three-js-detect-webgl-support-and-fallback-to-regular-canvas
     function webglAvailable(canvas) {
@@ -651,6 +651,7 @@ Context.prototype.runOnCanvas = function(canvas,width,height) {
         (webglAvailable(canvas)) ? 
         new THREE.WebGLRenderer(params) : 
         new THREE.CanvasRenderer(params);
+
     this.renderer.setSize(width,height); 
 
     this.camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000); 
@@ -757,11 +758,11 @@ Context.prototype.runOnCanvas = function(canvas,width,height) {
                         Vector.normalize(Vector.cross(sym[2],sym[0])),
                         Vector.normalize(Vector.cross(sym[0],sym[1]))];
 
-    var render = function () {
-        // Only need to render at 30fps
+    this.render = function () {
+        // Only render at 25fps
         setTimeout(function() {
-            requestAnimationFrame( render );
-        }, 1000 / 30 );
+            requestAnimationFrame( context.render );
+        }, 1000 / 25 );
         if (needupdate) {
             // Make sure we have the right color setting in material
             if (context.colorstyle >= vertexcolorstyle) {
@@ -813,22 +814,22 @@ Context.prototype.runOnCanvas = function(canvas,width,height) {
             context.ifact = ifact;
             needupdate = true;
         }
-        if (context.dorotate) {
-            mesh.rotation.x += 0.004; 
-            mesh.rotation.y += 0.002;
-            needupdate = true;
-        }
         // Do we need to update again?
         if (context.stopwatch.running) {
             needupdate = true;
         }
+        // This is handled by THREE.js so we don't need to set needupdate.
+        if (context.dorotate) {
+            mesh.rotation.x += 0.004; 
+            mesh.rotation.y += 0.002;
+        }
         context.renderer.render(scene, context.camera);
     };
-    render(0); 
+    this.render(0); 
 }
 
 // Static function, access through prototype.
-Context.prototype.runOnWindow = function() {
+PolyContext.prototype.runOnWindow = function() {
     var options = window.location.search;
     if (options.length > 0) {
         // Strip off leading '?'
@@ -839,7 +840,7 @@ Context.prototype.runOnWindow = function() {
     document.body.appendChild(canvas); 
     var width = window.innerWidth;
     var height = window.innerHeight;
-    var context = new Context(options);
+    var context = new PolyContext(options);
     window.addEventListener("resize", function() {
         if (context.renderer) {
             var w = window.innerWidth;
