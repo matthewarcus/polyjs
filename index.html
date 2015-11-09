@@ -5,23 +5,26 @@
   </head> 
   <body>
     <h2>Drawing uniform polyhedra with Javascript, WebGL and THREE.js</h2>
+    <style>
+      canvas { background: black; }
+    </style> 
     <script src="js/three.min.js"></script> 
     <script src="js/OrbitControls.js"></script> 
     <script src="js/geometry.js"></script> 
     <script src="js/main.js"></script>
-    <canvas id="canvas1" width="480" height="480"></canvas>
-    <canvas id="canvas2" width="480" height="480"></canvas>
-    <canvas id="canvas3" width="480" height="480"></canvas>
-    <canvas id="canvas4" width="480" height="480"></canvas>
+    <canvas id="canvas1" height="400" width="400"></canvas>
+    <canvas id="canvas2" height="400" width="400"></canvas>
+    <canvas id="canvas3" height="400" width="400"></canvas>
+    <canvas id="canvas4" height="400" width="400"></canvas>
     <script>
       function run(canvas,options) {
-        var context = new Context(options);
-        runOnCanvas(canvas,context,canvas.width,canvas.height);
+        var context = new PolyContext(options);
+        context.runOnCanvas(canvas,canvas.width,canvas.height);
       }
       run(canvas1, "args=3:2:5/3&sym=3:2:2&colorstyle=1&t=7&tour=1&dorotate&run");
       run(canvas2, "args=3:2:5/3&colorstyle=3&z=8&tour=1&t=7&dual&dorotate&run");
       run(canvas3, "args=2:3:3&sym=2:3:5&compound&dorotonly&zrot=4&dorotate&tour=1&run");
-      run(canvas4, "args=2:2:37/19&sym=3:2:4&colorstyle=3&&snub&both&dorotate&run");
+      run(canvas4, "args=2:2:37/19&sym=3:2:4&colorstyle=3&snub&both&dorotate&run");
     </script>
     <p>
     <a href="https://github.com/matthewarcus/polyjs/">Source on Github</a>
@@ -59,16 +62,23 @@
     symmetry along the z-axis so rotating around that axis gives different compounds. This includes the full set
     of Uniform Compounds enumerated by Skilling, as well as many other combinations where eg. vertex transitivity fails.
     <ul>
-      <li><a href="poly.html?args=2:3:3&sym=2:3:3&dorotonly&dozrot&compound&dorotate&tri=0:1:0">UC01</a></li>
+      <li><a href="poly.html?args=2:3:3&sym=2:3:3&dozrot&compound&dorotate&tri=0:1:0">UC01 - 6 tetrahedra with rotational freedom</a></li>
+      <li><a href="poly.html?args=2:3:3&sym=4:2:3&dozrot&compound&dorotate&tri=0:1:0">UC02-04 - 12 tetrahedra with rotational freedom</a></li>
       <li><a href="poly.html?args=2:3:3&sym=2:3:5&compound&dorotonly&dorotate&zrot=4&tri=0:1:0">UC05 - 5 tetrahedra</a></li>
       <li><a href="poly.html?args=2:3:3&sym=2:3:5&compound&colorstyle=3&dorotate&zrot=4&tri=0:1:0">UC06 - 10 tetrahedra</a></li>
-      <li><a href="poly.html?args=3:2:4&sym=3:2:5&compound&tri=0:1:0&colorstyle=5&dozrot&dorotate">UC13-16</a></li>
-      <li><a href="poly.html?args=3:2:4&sym=3:2:5&compound&tri=0:1:0&colorstyle=0&zrot=0.25&dorotate">UC14 - 20 Octahedra</a></li>
-      <li><a href="poly.html?args=3:2:3/2&sym=3:2:5&tri=1:1:0&compound&colorstyle=3&dorotate&dorotonly&zrot=0.25">UC19 - 20 Hemihexahedra</a></li>
-      <li><a href="poly.html?args=5/3:2:2&sym=5:3:2&dozrot&tri=1:1:1&snub&colorstyle=3&compound&dorotate">UC28</a></li>
+      <li><a href="poly.html?args=4:2:2&sym=4:2:3&compound&colorstyle=5&dorotate&dozrot&t=1">UC07 - 6 cubes</a></li>
+      <li><a href="poly.html?args=3:2:4&sym=3:2:5&compound&tri=0:1:0&colorstyle=5&dozrot&dorotate">UC13-16 - 10 or 20 octahedra</a></li>
+      <li><a href="poly.html?args=3:2:4&sym=3:2:5&compound&tri=0:1:0&colorstyle=0&zrot=0.25&dorotate">UC14 - 20 octahedra</a></li>
+      <li><a href="poly.html?args=3:2:3/2&sym=3:2:5&tri=1:1:0&compound&colorstyle=3&dorotate&dorotonly&zrot=0.25">UC19 - 20 hemihexahedra</a></li>
+      <li><a href="poly.html?args=5:2:2&sym=5:3:2&compound&colorstyle=0&dorotate&dozrot&t=7&snub">UC26</a></li>
+      <li><a href="poly.html?args=5/3:2:2&sym=5:3:2&compound&colorstyle=3&dorotate&dozrot&t=7&snub">UC28</a></li>
+      <li><a href="poly.html?args=5/2:2:2&dorotonly&sym=5:3:2&compound&colorstyle=0&dorotate&zrot=10&t=8">UC36</a></li>
+      <li><a href="poly.html?args=5/2:2:2&sym=5:3:2&compound&colorstyle=1&dorotate&zrot=10&t=8">UC37</a></li>
       <li><a href="poly.html?args=6:2:2&sym=3:2:4&zrot=6&compound&tri=1:1:0&tridepth=4&colorstyle=5&dorotate">UC38</a></li>
+      <li><a href="poly.html?args=2:5/2:5&sym=2:3:5&invert&dual&t=4&colorstyle=3&compound&dorotate">UC49 - 5 great dodecahedra, as an inverted dual</a></li>
       <li><a href="poly.html?args=2:3/2:3/2&sym=2:3:3&colorstyle=1&tri=1:1:1&snub&compound&dorotate">UC52</a></li>
       <li><a href="poly.html?args=2:3:5/2&sym=2:3:5&colorstyle=5&tri=0:1:0&compound&dorotate">UC53</a></li>
+      <li><a href="poly.html?args=4/3:2:3&sym=2:3:5&t=3&compound&colorstyle=4&dorotate">UC58</a></li>
       <li><a href="poly.html?args=4/3:3/2:2&sym=2:3:5&zrot=4&hide=3&tri=1:1:1&colorstyle=0&compound&dorotate">UC66</a></li>
       <li><a href="poly.html?args=4:2:3/2&sym=2:3:5&colorstyle=4&tri=1:1:0&compound&dorotate">UC67</a></li>
       <li><a href="poly.html?args=2:3:5&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC69</a></li>

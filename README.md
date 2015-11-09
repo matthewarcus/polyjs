@@ -1,6 +1,6 @@
 polyjs
 ======
 
-Drawing uniform polyhedra and compounds with Javascript &amp; THREE.js
+Animating uniform polyhedra and compounds with Javascript &amp; THREE.js
 
 https://matthewarcus.github.io/polyjs
