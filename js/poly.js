@@ -85,7 +85,7 @@ function PolyContext(options) {
     this.processoptions(options);
 }
 
-PolyContext.prototype.Stopwatch = function(init,step,running) {
+PolyContext.Stopwatch = function(init,step,running) {
     // When running, reported time is difference between Date.now()
     // and stored time. When stopped, reported time is just the
     // stored time.
@@ -94,15 +94,15 @@ PolyContext.prototype.Stopwatch = function(init,step,running) {
     this.setTime(init || 0); // Different semantics in running and non-running states
 }
 
-PolyContext.prototype.Stopwatch.prototype.toggle = function() { 
+PolyContext.Stopwatch.prototype.toggle = function() { 
     this.running = !this.running;
     this.time = Date.now()-this.time;
 }
-PolyContext.prototype.Stopwatch.prototype.setTime = function(t) { 
+PolyContext.Stopwatch.prototype.setTime = function(t) { 
     if (this.running) this.time = Date.now()-t*this.scale;
     else this.time = t*this.scale;
 }
-PolyContext.prototype.Stopwatch.prototype.incTime = function(t) { 
+PolyContext.Stopwatch.prototype.incTime = function(t) { 
     if (this.running) {
         this.time -= t*this.scale;
     } else {
@@ -112,7 +112,7 @@ PolyContext.prototype.Stopwatch.prototype.incTime = function(t) {
     }
 }
 
-PolyContext.prototype.Stopwatch.prototype.getTime = function() {
+PolyContext.Stopwatch.prototype.getTime = function() {
     if (this.running) return (Date.now()-this.time)/this.scale;
     else return this.time/this.scale;
 }
@@ -322,12 +322,13 @@ PolyContext.prototype.handleKey = function(key) {
 // so there is some significant optimizations possible here.
 // Return the index in the geometries list of points.
 PolyContext.prototype.drawpoint = function(p,offset) {
+    var Vector = Geometry.Vector;
     var w = p[3] || 1; // Homogeneous coords
     // For fun, do the explode before the inversion
     if (this.donormalize) w = Vector.length(p);
     var ifact = this.ifact;
     if (ifact != 0) {
-        //var q = invert(p,this.midsphere);
+        //var q = Vector.invert(p,this.midsphere);
         var k = Vector.dot(p,p)/this.midsphere;
         if (ifact == 1) w *= k;
         else w *= (1-ifact)+ifact*k;
@@ -352,6 +353,7 @@ PolyContext.prototype.drawpoint = function(p,offset) {
 // For n > 0, draw a Sierpinski triangle (or some
 // variation thereof).
 PolyContext.prototype.drawtriangle = function(p,q,r,offset,type,i,n) {
+    var Vector = Geometry.Vector;
     if (n == 0) {
         var index0 = this.drawpoint(p,offset);
         var index1 = this.drawpoint(q,offset);
@@ -373,6 +375,7 @@ PolyContext.prototype.drawtriangle = function(p,q,r,offset,type,i,n) {
 }
 
 PolyContext.prototype.drawface = function(centre,plist,facetype,i,tridepth) {
+    var Vector = Geometry.Vector;
     if (this.drawface0) {
         this.drawface0(plist);
     } else {
@@ -404,6 +407,7 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,i,tridepth) {
 
 // Draw the Schwarz triangles (fundamental regions) as triangles.
 PolyContext.prototype.drawregions = function() {
+    var Vector = Geometry.Vector;
     var schwarz = this.schwarz;
     var facedata = this.facedata;
     var points = schwarz.points;
@@ -429,16 +433,17 @@ PolyContext.prototype.drawregions = function() {
                 }
             }
             for (var j = 0; j < plist.length; j++) {
-                plist[j] = invert(plist[j],this.midsphere);
+                plist[j] = Vector.invert(plist[j],this.midsphere);
             }
             var facetype = 4+region[3];
-            var centre = invert(regionpoints[i],this.midsphere);
+            var centre = Vector.invert(regionpoints[i],this.midsphere);
             this.drawface(centre,plist,facetype,i,this.tridepth)
         }
     }
 }
 
 PolyContext.prototype.drawfaces = function() {
+    var Vector = Geometry.Vector;
     var schwarz = this.schwarz;
     var facedata = this.facedata;
     var points = schwarz.points;
@@ -504,6 +509,8 @@ PolyContext.prototype.drawfaces = function() {
 // based on the fundamental regions info in schwarz, using
 // trilinear coords tri, and with the colorface coloring function.
 PolyContext.prototype.setup = function(tri) {
+    var Vector = Geometry.Vector;
+    var PointSet = Geometry.PointSet;
     this.npoints = 0;
     this.nfaces = 0;
     this.needclone = false;
@@ -527,17 +534,17 @@ PolyContext.prototype.setup = function(tri) {
         var s = schwarz.applybary(bary,0);
         bary = Vector.div(bary,Vector.length(s));
     }
-    var facedata = makefacedata(schwarz,bary);
+    var facedata = schwarz.makefacedata(bary);
     if (this.docompound) {
         var regionpoints = facedata.regionpoints;
         // Set up the initial pointset (for compound generation).
         var pointset = [];
         for (var i = 0; i < regionpoints.length; i++) {
             if (!this.dosnubify || regions[i][3] == 0) {
-                setadd(regionpoints[i],pointset,1e-6);
+                PointSet.add(regionpoints[i],pointset,1e-6);
             }
         }
-        setsort(pointset);
+        PointSet.sort(pointset);
         this.pointset = pointset;
     }
     this.tri = tri
@@ -549,7 +556,7 @@ PolyContext.prototype.setup = function(tri) {
         this.midsphere = facedata.midsphere;
     }
     if (this.dostellate) {
-        stellate(schwarz,facedata, this.hideface);
+        schwarz.stellate(facedata, this.hideface);
     }
 }
 
@@ -560,6 +567,8 @@ PolyContext.prototype.drawpolyhedron = function() {
 }
 
 PolyContext.prototype.drawcompound = function(tripoint) {
+    var Vector = Geometry.Vector;
+    var PointSet = Geometry.PointSet;
     // We use a group word to describe a particular transformation
     var gens = ["P","Q","R"];
     var rgens = ["PQ","QR","RP"];
@@ -582,8 +591,8 @@ PolyContext.prototype.drawcompound = function(tripoint) {
             var entry = pointsets[pindex];
             var ops = this.dorotonly ? rgens : gens; // Rotation only or all operations?
             for (var i = 0; i < ops.length; i++) {
-                var newset = mapply(ops[i],entry.pointset,ip,iq,ir);
-                setsort(newset);
+                var newset = Geometry.mapply(ops[i],entry.pointset,ip,iq,ir);
+                PointSet.sort(newset);
                 // Have we seen this pointset before?
                 var seen = false;
                 var parity = (entry.trans.length + ops[i].length)%2;
@@ -591,7 +600,7 @@ PolyContext.prototype.drawcompound = function(tripoint) {
                     // If we care about chirality (ie. are generating a snub figure)
                     // then don't consider reflected pointsets the same).
                     if (this.dosnubify && pointsets[j].trans.length%2 != parity) continue;
-                    if (setequal(newset,pointsets[j].pointset,1e-6)) {
+                    if (PointSet.equal(newset,pointsets[j].pointset,1e-6)) {
                         seen = true;
                         break;
                     }
@@ -601,7 +610,7 @@ PolyContext.prototype.drawcompound = function(tripoint) {
                     // TBD: we could just reuse the geometry with a rotation
                     // and a change of color.
                     var newtrans = entry.trans + ops[i];
-                    this.transmat = makematrix(newtrans,ip,iq,ir);
+                    this.transmat = Geometry.makematrix(newtrans,ip,iq,ir);
                     this.compound++;
                     this.drawpolyhedron();
                     pointsets.push({trans: newtrans, pointset: newset});
@@ -612,6 +621,7 @@ PolyContext.prototype.drawcompound = function(tripoint) {
 }
 
 PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
+    var Vector = Geometry.Vector;
     var context = this; // For benefit of subfunctions
     // http://stackoverflow.com/questions/9899807/three-js-detect-webgl-support-and-fallback-to-regular-canvas
     function webglAvailable(canvas) {
@@ -660,9 +670,9 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
     var controls = new THREE.OrbitControls( this.camera, canvas );
 
     // Keep track of time
-    this.stopwatch = new this.Stopwatch(this.initt,
-                                        this.animstep,
-                                        this.initrunning);
+    this.stopwatch = new PolyContext.Stopwatch(this.initt,
+                                               this.animstep,
+                                               this.initrunning);
 
     // Set this if next display loop should recompute geometry
     var needupdate = true;
@@ -750,13 +760,14 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
     // Set up constant aspects of polyhedra generation
     // schwarz has all the details about the particular set of
     // fundamental regions we are working with.
+    var Schwarz = Geometry.Schwarz;
     this.schwarz = new Schwarz(this.angles);
     //this.schwarz.describe(false);
 
-    var sym = makesymmetry(this.initsym);
+    var sym = Schwarz.makesymmetry(this.initsym);
     this.symmetry = [Vector.normalize(Vector.cross(sym[1],sym[2])),
-                        Vector.normalize(Vector.cross(sym[2],sym[0])),
-                        Vector.normalize(Vector.cross(sym[0],sym[1]))];
+                     Vector.normalize(Vector.cross(sym[2],sym[0])),
+                     Vector.normalize(Vector.cross(sym[0],sym[1]))];
 
     this.render = function () {
         // Only render at 25fps
@@ -828,8 +839,8 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
     this.render(0); 
 }
 
-// Static function, access through prototype.
-PolyContext.prototype.runOnWindow = function() {
+// Static function, direct member of PolyContext.
+PolyContext.runOnWindow = function() {
     var options = window.location.search;
     if (options.length > 0) {
         // Strip off leading '?'
