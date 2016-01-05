@@ -928,6 +928,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
 
     this.showoff = function() {
         var basegeom = context.basegeom;
+        if (!basegeom) return;
         var basecolors = context.basecolors;
         var geometry = new THREE.Geometry;
         function drawpolyhedron(init,trans) {
