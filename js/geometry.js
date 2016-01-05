@@ -1,4 +1,27 @@
 "use strict";
+
+// The MIT License (MIT)
+
+// Copyright (c) 2016 Matthew Arcus
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 // Miscellaneous functions used by the main polyhedra generation code
 
 // The usual namespace object
@@ -43,13 +66,6 @@ var Geometry = {};
             }
             return s;
         },
-        mid: function(u,v) {
-            var w = new Array(u.length);
-            for (var i = 0; i < u.length; i++) {
-                w[i] = (u[i]+v[i])/2;
-            }
-            return w;
-        },
         add: function(u,v) {
             var w = [];
             for (var i = 0; i < u.length; i++) {
@@ -77,8 +93,25 @@ var Geometry = {};
         div: function(u,x) {
             return Vector.mul(u,1/x);
         },
+        negate: function(u) {
+            return Vector.mul(u,-1);
+        },
         normalize: function(u) {
             return Vector.div(u,Vector.length(u));
+        },
+        mid: function(u,v) {
+            var w = new Array(u.length);
+            for (var i = 0; i < u.length; i++) {
+                w[i] = (u[i]+v[i])/2;
+            }
+            return w;
+        },
+        interp: function(u,v,k) {
+            var w = new Array(u.length);
+            for (var i = 0; i < u.length; i++) {
+                w[i] = k*u[i]+(1-k)*v[i];
+            }
+            return w;
         },
         copy: function(u) {
             var w = [];
@@ -217,7 +250,11 @@ var Geometry = {};
 
     PointSet.equal = function(s,t,eps) {
         var res = setequal1(s,t,eps);
-        //console.assert(res == setequal2(s,t,eps));
+        // if (res !== setequal0(s,t,eps)) {
+        //     console.log(JSON.stringify(s));
+        //     console.log(JSON.stringify(t));
+        //     console.assert(false);
+        // }
         return res;
     }
 
@@ -503,20 +540,41 @@ var Geometry = {};
                                                points[region[2]]);
         }
         // Compute barycentric coords of centre of snub triangle.
-        // This is just the centre of s0,s1,s2.
-        var snubcentre = null;
+        // ie. the centre of s0,s1,s2. The centre here means the face
+        // normal (so polar reciprocation will work).
         var norm = Vector.cross(Vector.sub(s1,s0),Vector.sub(s2,s0));
         var normlen = Vector.length(norm);
-        //console.log(normlen+" "+s0+" "+s1+" "+s2);
         if (normlen < eps) {
             // If the triangle is degenerate, the calculation fails.
-            // TBD: find a suitable approximation
-            console.log("Snubcentre failure for [" + bary + "]");
-        } else {
-            norm = Vector.normalize(norm);
-            norm = Vector.mul(norm,Vector.dot(s0,norm));
-            snubcentre = Vector.getbary(p,q,r,norm);
+            if (0) {
+                // A suitable approximation
+                var newbary = [bary[0],bary[1],bary[2]];
+                if (Math.abs(newbary[0] < eps)) newbary[0] = eps;
+                else if (Math.abs(newbary[1] < eps)) newbary[1] = eps;
+                else if (Math.abs(newbary[2] < eps)) newbary[2] = eps;
+                var ns = Vector.applybary(newbary,p,q,r);
+                var ns0 = Vector.reflect(q,r,ns);
+                var ns1 = Vector.reflect(r,p,ns);
+                var ns2 = Vector.reflect(p,q,ns);
+                norm = Vector.cross(Vector.sub(ns1,ns0),Vector.sub(ns2,ns0));
+            } else {
+                var tmp;
+                // But this is better
+                // So, if the snub triangle is degenerate (because the face
+                // point is in the corner of the Schwarz triangle), then we want
+                // the limit, which turns out to be the mid point of
+                // line from the face point in the opposite side.
+                if (Math.abs(bary[0] > eps)) tmp = s0;
+                else if (Math.abs(bary[1] > eps)) tmp = s1;
+                else if (Math.abs(bary[2] > eps)) tmp = s2;
+                norm = Vector.mid(s,tmp);
+            }
+            normlen = Vector.length(norm);
         }
+        norm = Vector.div(norm,normlen);
+        // Set the height correctly (to be on the s0,s1,s2 plane)
+        norm = Vector.mul(norm,Vector.dot(s0,norm));
+        var snubcentre = Vector.getbary(p,q,r,norm);
 
         // Taking the middle edge seems to give good results
         var snubsphere = Math.max(Vector.dot(Vector.mid(s0,s1)),

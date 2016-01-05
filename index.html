@@ -1,15 +1,35 @@
-<html>
-  <head> 
-    <meta charset="UTF-8">
-    <title>PolyJS</title> 
-  </head> 
+<html><head><meta charset="UTF-8"><title>PolyJS</title></head> 
+<!--
+(c) Matthew Arcus, 2016
+
+MIT Licence
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
   <body>
     <h2>Drawing uniform polyhedra with Javascript, WebGL and THREE.js</h2>
     <style>
       canvas { background: black; }
     </style> 
-    <script src="js/three.min.js"></script> 
+    <script src="js/three/three.min.js"></script> 
     <script src="js/OrbitControls.js"></script> 
+    <script src="js/OFFLoader.js"></script> 
     <script src="js/geometry.js"></script> 
     <script src="js/poly.js"></script>
     <canvas id="canvas1" height="400" width="400"></canvas>
@@ -21,73 +41,106 @@
         var context = new PolyContext(options);
         context.runOnCanvas(canvas,canvas.width,canvas.height);
       }
-      run(canvas1, "args=3:2:5/3&sym=3:2:2&colorstyle=1&t=7&tour=1&dorotate&run");
-      run(canvas2, "args=3:2:5/3&colorstyle=3&z=8&tour=1&t=7&dual&dorotate&run");
-      run(canvas3, "args=2:3:3&sym=2:3:5&compound&dorotonly&zrot=4&dorotate&tour=1&run");
-      run(canvas4, "args=2:2:37/19&sym=3:2:4&colorstyle=3&snub&both&dorotate&run");
+      run(canvas1, "args=3:2:5/3&sym=3:2:2&colorstyle=1&t=7&tour=1&rotate&run");
+      run(canvas2, "args=3:2:5/3&colorstyle=3&z=8&tour=1&t=7&dual&rotate&run");
+      run(canvas3, "args=2:3:3&sym=2:3:5&compound&chiral&theta=4&rotate&tour=1&run&texture=images/208.jpg");
+      run(canvas4, "args=2:2:37/19&sym=3:2:4&colorstyle=3&snub&both&rotate&run");
     </script>
     <p>
     <a href="https://github.com/matthewarcus/polyjs/">Source on Github</a>
+
+    <h2>Introduction</h2>
+    <p>The <a href=https://en.wikipedia.org/wiki/Wythoff_construction>Wythoff construction</a> is an elegant way of constructing polyhedra from a basic spherical tiling, represented by <a href="https://en.wikipedia.org/wiki/Schwarz_triangle">Schwarz triangles</a>.
+    
+<p>Using the construction, combined with some fairly straightforward vector geometry, we can generate 3D models of uniform polyhedra and their derivatives: we use a kaleidoscopic construction to generate the Schwarz triangles and then use trilinear coordinates within each triangle to determine the polyhedron vertices (with the trilinear coordinates being converted to barycentric for actually generating the points). Vertices for snub polyhedra are found by iterative approximation. We can also use this information to generate duals and stellations as well as using the Schwarz triangle tiling to apply further symmetry operations to basic polyhedra to create compounds.
+<p>Using the excellent <a href="http://threejs.org">THREE.js</a> Javascript library from <a href="http://mrdoob.com/">Mr.doob</a>, we can do all this with WebGL in real time.
     <h2>Examples</h2>
     <h3>Sequences</h3>
     <p>
       Given a Schwarz triangle, we can move around inside that triangle to create different polyhedra (ie. given
-      a set of mirrors, we can move the vertex point around inside those mirrors). We can even move outside the triangle itself.
+      a set of mirrors, we can move the vertex point around inside those mirrors). A position within the triangle can be specified
+      with trilinear coordinates, eg. (1,1,1) is the central point, etc. We can even move outside the triangle itself with
+      coordinates like (-1,1,1) etc.
     <ul>
-      <!-- <li><a href="poly.html?args=2:3:5&sym=3:2:4&colorstyle=1&snub&dual">[3 2 5]</a></li> -->
-      <li><a href="poly.html?args=3:2:5&sym=3:2:4&colorstyle=1&dorotate&tour=1&run">[3 2 5]: Convex icosahedral symmetry</a></li>
-      <li><a href="poly.html?args=3:2:5&sym=3:2:4&colorstyle=1&dorotate&tour=2&run">[3 2 5]: Outside the Schwarz triangle</a></li>
-      <li><a href="poly.html?args=5/4:5/4:5/4&sym=2:3:5&colorstyle=1&dorotate&run">[5/4 5/4 5/4]</a></li>
-      <li><a href="poly.html?args=2:3/2:5/3&sym=3:2:4&colorstyle=1&dorotate&run">[2 3/2 5/3]</a></li>
-      <li><a href="poly.html?args=3:2:5/3&sym=3:2:4&colorstyle=1&t=7&tour=1&dorotate&run">[3 2 5/3]</a></li>
-      <li><a href="poly.html?args=3:2:5/3&colorstyle=3&z=8&tour=1&t=7&dual&dorotate&run">[3 2 5/3]: dual figures</a></li>
+      <li><a href="poly.html?args=3:2:5&sym=3:2:4&colorstyle=1&rotate&tour=1&run">[3 2 5]: Convex icosahedral symmetry</a></li>
+      <li><a href="poly.html?args=3:2:5&sym=3:2:4&colorstyle=1&rotate&tour=2&run">[3 2 5]: Outside the Schwarz triangle</a></li>
+      <li><a href="poly.html?args=5/4:5/4:5/4&sym=2:3:5&colorstyle=1&rotate&run">[5/4 5/4 5/4]</a></li>
+      <li><a href="poly.html?args=2:3/2:5/3&sym=3:2:4&colorstyle=1&rotate&run">[2 3/2 5/3]</a></li>
+      <li><a href="poly.html?args=3:2:5/3&sym=3:2:4&colorstyle=1&t=7&tour=1&rotate&run">[3 2 5/3]</a></li>
+      <li><a href="poly.html?args=3:5/2:5/3&sym=3:2:4&colorstyle=7&snub&t=7&rotate&texture=images/202.jpg">[3 5/2 5/3]</a> - looks good in granite</li>
+      <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&t=7&snub&colorstyle=1&rotate">U72</a></li>
+      <!-- <li><a href="poly.html?args=3:5/2:5/3&sym=3:2:4&colorstyle=1&tri=1:1:1&snub&rotate">[3 5/2 5/3]</a></li> -->
     </ul>
-    <h3>Single Polyhedra</h3>
+    We can also show dual figures, and also use inversion to display the original polyhedra, but in a different way:
     <ul>
-      <li><a href="poly.html?args=3:5/2:5/3&sym=3:2:4&colorstyle=1&tri=1:1:1&snub&dorotate">[3 5/2 5/3]</a></li>
-      <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&tri=1:1:1&snub&colorstyle=2&dorotate">U72</a></li>
-      <p>[2 2 1] doesn't make for a very interesting polyhedron, but we can use it as a symmetry to combine mirror images of other polyhedra. Here we have two copies of ???, with "hemi" faces added (from the origin to each edge) and certain other sets of faces hidden. The result is the two uniform polyhedra that cannot be made by a "minute variation" of the Wythoff construction.
-      <li><a href="poly.html?args=5/3:5/2:3&sym=2:2:1&colorstyle=1&hemi&hide=3&hide=4&tri=1:1:1&snub&compound&dorotate">U75: "Miller's Monster"</a></li>
-      <li><a href="poly.html?args=5/3:5/2:3&sym=2:2:1&colorstyle=1&hemi&hide=2&hide=3&tri=1:1:1&snub&compound&dorotate">"Skilling's Figure"</a></li>
+      <li><a href="poly.html?args=3:2:5/3&colorstyle=3&z=8&tour=1&t=7&dual&rotate&run">[3 2 5/3]: dual figures</a></li>
+      <li><a href="poly.html?args=3:2:5&colorstyle=3&regionstyle=1&dual&snub&rotate&run">[3 2 5]: snub dual regions</a></li>
+      <li><a href="poly.html?args=3:2:5&colorstyle=7&dual&invert&texture=images/220.jpg&run&rotate">[3 2 5]: inverted duals</a> - a nice symmetric effect with texturing (each Schwarz triangle uses the same texture coordinates).</li>
     </ul>
-    <h3>Misc</h3>
+
+    <p>Sometimes we need a little adjustment of the polyhedron before display, for example, to omit a set of faces or add "hemi" faces through the origin (we cheat a little here and just add a triangle connecting each edge with the origin, rather than adding a proper face).
+    
+    <p>[2 2 1] doesn't make for a very interesting polyhedron, but we can use it as a symmetry to combine mirror images of other polyhedra. We can use two copies of U69, with "hemi faces" added and certain other sets of faces hidden. The result is the two uniform polyhedra that cannot be made by a "minute variation" of the Wythoff construction (this method of constructing these polyhedra from U69 is described by <a href="http://www.math.technion.ac.il/S/rl/">Zvi Har’El</a>):
     <ul>
-      <li><a href="poly.html?args=2:2:37/19&sym=3:2:4&colorstyle=2&tri=1:1:1&snub&compound&dorotate">[2 2 37/19]: A nice compound</a></li>
-      <li><a href="poly.html?args=2:5/3:3&sym=2:3:5&colorstyle=1&stellate&dorotate&z=20&t=3&tour=1">Stellation - final only.</a></li>
-      <li><a href="poly.html?args=2:5:3&sym=2:3:5&colorstyle=1&dorotate&compound&dozrot&run&t=7&tour=1">Compound animation</a></li>
-      <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&snub&colorstyle=4&t=7&tour=1&z=0.01&tridepth=4&dorotate&run&invert">!!!</a></li>
+      <li><a href="poly.html?args=2:5/3:5/4&colorstyle=7&hide=2&t=7&texture=images/239.jpg&rotate">U73</a></li>
+      <li><a href="poly.html?args=5/3:5/2:3&sym=2:2:1&colorstyle=1&hemi&hide=3&hide=4&tri=1:1:1&snub&compound&rotate">U75: "Miller's Monster"</a></li>
+      <li><a href="poly.html?args=5/3:5/2:3&sym=2:2:1&colorstyle=1&hemi&hide=2&hide=3&tri=1:1:1&snub&compound&rotate">"Skilling's Figure"</a></li>
+    </ul>
+    A few other examples:
+    <ul>
+      <li><a href="poly.html?args=2:2:37/19&sym=3:2:4&colorstyle=2&tri=1:1:1&snub&compound&rotate">[2 2 37/19]: A nice compound</a></li>
+      <li><a href="poly.html?args=2:5/3:3&sym=2:3:5&colorstyle=1&stellate&rotate&z=20&t=3&tour=1">Stellation - final only.</a></li>
+      <li><a href="poly.html?args=2:5:3&sym=2:3:5&colorstyle=1&rotate&compound&zrotate&run&t=7&tour=1">Compound animation</a></li>
+      <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&snub&colorstyle=4&t=7&tour=1&z=0.01&tridepth=4&rotate&run&invert">!!!</a></li>
+    </ul>
+    <h3>OFF files</h3>
+    We can load files in OFF format (for example, as generated by the excellent <a href="http://www.antiprism.com/">Antiprism</a> tools) and display with various embellishments. Compounding is also possible (though may be slow if the OFF file contains many vertices):
+    <ul>
+      <li><a href="poly.html?off=off/leo.off&texture=images/239.jpg&z=20&rotate">Leonardo-style Waterman polyhedron<a> (generated by Antiprism)</li>
+      <li><a href="poly.html?off=off/spiral.off&colorstyle=2&compound&chiral&z=25&rotate">Compound of 30 6-armed spirallohedra</a> (see <a href="http://www.northforktrails.com/RussellTowle/Polytopes/spirallo/close_pack.html">here</a>)</li>
+    </ul>
+    Some <a href="http://www.antiprism.com/examples/index.html">Antiprism examples</a>:
+    <ul>
+      <li><a href="poly.html?off=off/weave2.off&nofaces&noedges&novertices&spline&colorstyle=1&rotate">A woven polyhedron</a> - a nice opportunity to use THREE.js 3D spline tubes.</li>
+      <li><a href="poly.html?off=off/torus.off&sym=2:2:1&compound&theta=4&noedges&novertices&colorstyle=1&texture=images/218.jpg&z=10&rotate">Two toruses</a></li>
+      <li><a href="poly.html?off=off/basket.off&colorstyle=1&vertexwidth=0.05&rotate">String art</a></li>
+    </ul>
+    And a couple from <a href="http://www.interocitors.com/">Roger Kaufman</a>:
+    <ul>
+      <li><a href="poly.html?off=off/N8-T1s.off&allvertices&alledges&texture=images/202.jpg&vertexwidth=0.03&edgewidth=0.015&rotate&colorstyle=1&vertexstyle=cylinder">Octa-Sphericon Dual</a> (see <a href="http://www.interocitors.com/polyhedra/n_icons/EvenOrderSideCut/index.html">here</a>)</li>
+      <li><a href="poly.html?off=off/Icosagyrexcavated_Icosahedron.off&z=2&rotate&nofaces&vertexwidth=0.02&edgewidth=0.01&colorstyle=1">Icosagyrexcavated Icosahedron</a> (see <a href="http://www.interocitors.com/polyhedra/Deltahedra/Cundy/Coptic/">here</a>)</li>
     </ul>
     <h3>Uniform Compounds</h3>
-    We can apply another set of symmetries to the polyhedron - our Schwarz triangle construction gives an axis of
-    symmetry along the z-axis so rotating around that axis gives different compounds. This includes the full set
-    of Uniform Compounds enumerated by Skilling, as well as many other combinations where eg. vertex transitivity fails.
+    Instead of using a set of Schwarz triangles to draw a polyhedron, we can use the triangle sides as a set of mirrors to apply a set of symmetries to another polyhedron - our Schwarz triangle construction gives an axis of symmetry along the z-axis so rotating around that axis gives different alignments. This seems to include the full set of Uniform Compounds enumerated by Skilling, as well as many other combinations where eg. vertex transitivity fails. See George Hart's pages on <a href="http://www.georgehart.com/virtual-polyhedra/compounds-info.html">Compound Polyhedra</a> for more details.
     <ul>
-      <li><a href="poly.html?args=2:3:3&sym=2:3:3&dozrot&compound&dorotate&tri=0:1:0">UC01 - 6 tetrahedra with rotational freedom</a></li>
-      <li><a href="poly.html?args=2:3:3&sym=4:2:3&dozrot&compound&dorotate&tri=0:1:0">UC02-04 - 12 tetrahedra with rotational freedom</a></li>
-      <li><a href="poly.html?args=2:3:3&sym=2:3:5&compound&dorotonly&dorotate&zrot=4&tri=0:1:0">UC05 - 5 tetrahedra</a></li>
-      <li><a href="poly.html?args=2:3:3&sym=2:3:5&compound&colorstyle=3&dorotate&zrot=4&tri=0:1:0">UC06 - 10 tetrahedra</a></li>
-      <li><a href="poly.html?args=4:2:2&sym=4:2:3&compound&colorstyle=5&dorotate&dozrot&t=1">UC07 - 6 cubes</a></li>
-      <li><a href="poly.html?args=3:2:4&sym=3:2:5&compound&tri=0:1:0&colorstyle=5&dozrot&dorotate">UC13-16 - 10 or 20 octahedra</a></li>
-      <li><a href="poly.html?args=3:2:4&sym=3:2:5&compound&tri=0:1:0&colorstyle=0&zrot=0.25&dorotate">UC14 - 20 octahedra</a></li>
-      <li><a href="poly.html?args=3:2:3/2&sym=3:2:5&tri=1:1:0&compound&colorstyle=3&dorotate&dorotonly&zrot=0.25">UC19 - 20 hemihexahedra</a></li>
-      <li><a href="poly.html?args=5:2:2&sym=5:3:2&compound&colorstyle=0&dorotate&dozrot&t=7&snub">UC26</a></li>
-      <li><a href="poly.html?args=5/3:2:2&sym=5:3:2&compound&colorstyle=3&dorotate&dozrot&t=7&snub">UC28</a></li>
-      <li><a href="poly.html?args=5/2:2:2&dorotonly&sym=5:3:2&compound&colorstyle=0&dorotate&zrot=10&t=8">UC36</a></li>
-      <li><a href="poly.html?args=5/2:2:2&sym=5:3:2&compound&colorstyle=1&dorotate&zrot=10&t=8">UC37</a></li>
-      <li><a href="poly.html?args=6:2:2&sym=3:2:4&zrot=6&compound&tri=1:1:0&tridepth=4&colorstyle=5&dorotate">UC38</a></li>
-      <li><a href="poly.html?args=2:5/2:5&sym=2:3:5&invert&dual&t=4&colorstyle=3&compound&dorotate">UC49 - 5 great dodecahedra, as an inverted dual</a></li>
-      <li><a href="poly.html?args=2:3/2:3/2&sym=2:3:3&colorstyle=1&tri=1:1:1&snub&compound&dorotate">UC52</a></li>
-      <li><a href="poly.html?args=2:3:5/2&sym=2:3:5&colorstyle=5&tri=0:1:0&compound&dorotate">UC53</a></li>
-      <li><a href="poly.html?args=4/3:2:3&sym=2:3:5&t=3&compound&colorstyle=4&dorotate">UC58</a></li>
-      <li><a href="poly.html?args=4/3:3/2:2&sym=2:3:5&zrot=4&hide=3&tri=1:1:1&colorstyle=0&compound&dorotate">UC66</a></li>
-      <li><a href="poly.html?args=4:2:3/2&sym=2:3:5&colorstyle=4&tri=1:1:0&compound&dorotate">UC67</a></li>
-      <li><a href="poly.html?args=2:3:5&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC69</a></li>
-      <li><a href="poly.html?args=2:5/2:3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC70</a></li>
-      <li><a href="poly.html?args=2:5/3:3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC71</a></li>
-      <li><a href="poly.html?args=2:5/3:3/2&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC72</a></li>
-      <li><a href="poly.html?args=2:5:5/2&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC73</a></li>
-      <li><a href="poly.html?args=2:5:5/3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC74</a></li>
-      <li><a href="poly.html?args=3:5:5/3&sym=3:2:5&compound&snub&tri=1:1:1&colorstyle=1&dorotate">UC75</a></li>
+      <li><a href="poly.html?args=2:3:3&sym=2:3:3&zrotate&compound&rotate&t=2">UC01 - 6 tetrahedra with rotational freedom</a></li>
+      <li><a href="poly.html?args=2:3:3&sym=4:2:3&zrotate&compound&rotate&t=2">UC02-04 - 12 tetrahedra with rotational freedom</a></li>
+      <li><a href="poly.html?args=2:3:3&sym=2:3:5&compound&chiral&rotate&theta=4&t=2">UC05 - 5 tetrahedra</a></li>
+      <li><a href="poly.html?args=2:3:3&sym=2:3:5&compound&colorstyle=3&rotate&theta=4&tri=0:1:0">UC06 - 10 tetrahedra</a></li>
+      <li><a href="poly.html?args=4:2:2&sym=4:2:3&compound&colorstyle=5&rotate&zrotate&t=1">UC07 - 6 cubes</a></li>
+      <li><a href="poly.html?args=3:3:2&sym=3:3:2&compound&t=2&chiral&colorstyle=4&zrotate">UC10-12 - 4 (if chiral) or 8 (if not) Octahedra</a></li>
+      <li><a href="poly.html?args=3:2:4&sym=3:2:5&compound&tri=0:1:0&colorstyle=5&zrotate&rotate">UC13-16 - 10 or 20 octahedra</a></li>
+      <li><a href="poly.html?args=3:2:4&sym=3:2:5&compound&tri=0:1:0&colorstyle=0&theta=0.25&rotate">UC14 - 20 octahedra</a></li>
+      <li><a href="poly.html?args=3:2:3/2&sym=3:2:5&tri=1:1:0&compound&colorstyle=3&rotate&chiral&theta=0.25">UC19 - 20 hemihexahedra</a></li>
+      <li><a href="poly.html?args=5:2:2&sym=5:3:2&compound&colorstyle=0&rotate&zrotate&t=7&snub">UC26</a></li>
+      <li><a href="poly.html?args=5/3:2:2&sym=5:3:2&compound&colorstyle=3&rotate&zrotate&t=7&snub">UC28</a></li>
+      <li><a href="poly.html?args=5/2:2:2&chiral&sym=5:3:2&compound&colorstyle=0&rotate&theta=10&t=8">UC36</a></li>
+      <li><a href="poly.html?args=5/2:2:2&sym=5:3:2&compound&colorstyle=1&rotate&theta=10&t=8">UC37</a></li>
+      <li><a href="poly.html?args=6:2:2&sym=3:2:4&theta=6&compound&tri=1:1:0&tridepth=4&colorstyle=5&rotate">UC38</a></li>
+      <li><a href="poly.html?args=10/3:2:2&sym=5:2:3&compound&t=1&rotate">UC41</a></li>
+      <li><a href="poly.html?args=2:5/2:5&sym=2:3:5&invert&dual&t=4&colorstyle=3&compound&rotate">UC49 - 5 great dodecahedra, as an inverted dual</a></li>
+      <li><a href="poly.html?args=2:3/2:3/2&sym=2:3:3&colorstyle=1&tri=1:1:1&snub&compound&rotate">UC52</a></li>
+      <li><a href="poly.html?args=2:3:5/2&sym=2:3:5&colorstyle=5&tri=0:1:0&compound&rotate">UC53</a></li>
+      <li><a href="poly.html?args=4/3:2:3&sym=2:3:5&t=3&compound&colorstyle=4&rotate">UC58</a></li>
+      <li><a href="poly.html?args=4/3:3/2:2&sym=2:3:5&theta=4&hide=3&tri=1:1:1&colorstyle=0&compound&rotate">UC66</a></li>
+      <li><a href="poly.html?args=4:2:3/2&sym=2:3:5&colorstyle=4&tri=1:1:0&compound&rotate">UC67</a></li>
+      <li><a href="poly.html?args=2:3:5&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&rotate">UC69</a></li>
+      <li><a href="poly.html?args=2:5/2:3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&rotate">UC70</a></li>
+      <li><a href="poly.html?args=2:5/3:3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&rotate">UC71</a></li>
+      <li><a href="poly.html?args=2:5/3:3/2&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&rotate">UC72</a></li>
+      <li><a href="poly.html?args=2:5:5/2&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&rotate">UC73</a></li>
+      <li><a href="poly.html?args=2:5:5/3&sym=2:3:5&compound&snub&tri=1:1:1&colorstyle=1&rotate">UC74</a></li>
+      <li><a href="poly.html?args=3:5:5/3&sym=3:2:5&compound&snub&tri=1:1:1&colorstyle=1&rotate">UC75</a></li>
     </ul>
     <h2>References</h2>
     <li><a href="http://en.wikipedia.org/wiki/List_of_uniform_polyhedra_by_Schwarz_triangle">Uniform Polyhedra</a></li>
@@ -104,6 +157,12 @@
       <li>p: return animation to start</li>
       <li>[: step animation back 1</li>
       <li>]: step animation forward 1</li>
+<!--
+      <li>,: animation slow down</li>
+      <li>.: animation speed up</li>
+      <li>9: brightness down</li>
+      <li>0: brightness up</li>
+-->
       <li>u: rotate colors</li>
       <li>f: step through color styles</li>
       <li>i: inversion on/off</li>
@@ -117,6 +176,7 @@
       <li>z: z rotation for compounds on/off</li>
       <li>a: reset z rotation</li>
       <li>t: change the tour around the Schwarz triangle</li>
+      <li>T: textures on/off</li>
       <li>x: rotation only for compounds on/off</li>
       <li>e: explode faces</li>
       <li>w: implode faces</li>
