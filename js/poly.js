@@ -817,6 +817,7 @@ function load(file, options, context) {
         for (var i = 0; i < geometry.faces.length; i++) {
             context.basecolors.push(geometry.faces[i].color);
         }
+        context.update(PolyContext.UpdateModel);
     }, onProgress, onError );
 }
 
