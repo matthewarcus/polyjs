@@ -58,7 +58,8 @@
 // Options for eg. drawing snub faces with centre or not
 // Separate coplanar faces in explode.
 // Sort out retrograde snub region edges bug
-// Bump mapping
+// Bump & normal maps
+// More efficient use of geometry objects
 // Proper uvs for hemi faces & stellations
 // Reuse point geometry between compounds
 // Table driven options
@@ -102,6 +103,7 @@ function PolyContext(options) {
     this.dohemi = false;
     this.animstep = 10; // Seconds per animation step
     this.texturefile = null;
+    this.normalfile = null;
     this.offfile = null;
     this.offoptions = THREE.OFFLoader.defaultoptions();
         
@@ -125,6 +127,10 @@ function PolyContext(options) {
 
     this.processoptions(options);
 }
+
+PolyContext.UpdateNone = 0;
+PolyContext.UpdateView = 1;
+PolyContext.UpdateModel = 2;
 
 PolyContext.Stopwatch = function(init,step,running) {
     // When running, reported time is difference between Date.now()
@@ -272,6 +278,8 @@ PolyContext.prototype.processoptions = function(options) {
             context.initrunning = true;
         } else if (matches = arg.match(/^texture=(.+)$/)) {
             context.texturefile = matches[1];
+        } else if (matches = arg.match(/^normal=(.+)$/)) {
+            context.normalfile = matches[1];
         } else if (matches = arg.match(/^off=(.+)$/)) {
             context.offfile = matches[1];
         } else if (matches = arg.match(/^vertexstyle=(.+)$/)) {
@@ -432,6 +440,7 @@ PolyContext.prototype.handleKey = function(key) {
 // (unless we are doing an exploded view).
 // so there is some significant optimizations possible here.
 // Return the index in the geometries list of points.
+
 PolyContext.prototype.drawpoint = function(p,offset) {
     var Vector = Geometry.Vector;
     var w = p[3] || 1; // Homogeneous coords
@@ -821,10 +830,6 @@ function load(file, options, context) {
     }, onProgress, onError );
 }
 
-PolyContext.UpdateNone = 0;
-PolyContext.UpdateView = 1;
-PolyContext.UpdateModel = 2;
-
 PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
     var Vector = Geometry.Vector;
     var PointSet = Geometry.PointSet;
@@ -847,7 +852,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
     //material.side = THREE.FrontSide;
     material.vertexColors = THREE.FaceColors;
     context.material = material;
-    
+
     if (context.texturefile) {
         var onLoad = function() {
             console.log("Texture loaded: " + context.texturefile);
@@ -872,6 +877,33 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
         //texture.repeat.set( 2, 2 );
         //console.log(texture);
         material.map = context.texture;
+        context.material.needsUpdate = true;
+    }
+    
+    if (context.normalfile) {
+        // FIXME: cut'n'paste
+        var onLoad = function() {
+            console.log("Normal map loaded: " + context.normalfile);
+            context.update(PolyContext.UpdateModel);
+        }
+        var onError = function(error) {
+            alert("Normal map load failed: " + context.normalfile);
+            console.log("Normal map load failed: " + context.normalfile);
+            console.log("Error: ", error);
+            material.normalMap = null;
+            material.needsUpdate = true;
+            context.needclone = true;
+            context.update(PolyContext.UpdateModel);
+        }
+        // Just call function directly, don't seem to need a "new"
+        var normalmap = new THREE.ImageUtils.loadTexture(context.normalfile,
+                                                         THREE.UVMapping,
+                                                         onLoad, onError);
+        normalmap.wrapS = THREE.RepeatWrapping;
+        normalmap.wrapT = THREE.RepeatWrapping;
+        //texture.repeat.set( 2, 2 );
+        //console.log(texture);
+        material.normalMap = normalmap;
         context.material.needsUpdate = true;
     }
 
@@ -1079,7 +1111,6 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
         return this.npoints++;
     }
 
-    var first = true;
     this.drawtriangle0 = function(a,b,c,tcoords,type,index) {
         console.assert(tcoords);
         if (this.nfaces == this.geometry.faces.length) {
