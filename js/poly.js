@@ -48,9 +48,12 @@
 // *Invertible snub duals
 // *Fix snubcentre for degenerate snub triangles
 // *Report errors on texture & off file loading
+// *Normal maps
+// Sort out the mess of geometry reuse/cloning etc.
 // Do something about flicker from coplanar faces
 // Speed control
 // Dimmer switch
+// Bump maps
 // Better lights
 // UI to rotate object rather than scene
 // Gesture UI
@@ -58,7 +61,6 @@
 // Options for eg. drawing snub faces with centre or not
 // Separate coplanar faces in explode.
 // Sort out retrograde snub region edges bug
-// Bump & normal maps
 // More efficient use of geometry objects
 // Proper uvs for hemi faces & stellations
 // Reuse point geometry between compounds
@@ -121,7 +123,7 @@ function PolyContext(options) {
 
     this.initrunning = false;
     this.initz = 3;
-    this.initsym = [2,3,5];
+    this.initsym = [2,2,1]; // Single reflection
     this.angles  = [2,3,5];
     this.initt = 0;
 
@@ -232,7 +234,7 @@ PolyContext.prototype.processoptions = function(options) {
         } else if (matches = arg.match(/^sym=([\d]+):([\d]+):([\d]+)$/)) {
             context.initsym = context.makeangles(matches[1],1,matches[2],1,matches[3],1);
             context.url += "&" + matches[0];
-        } else if (matches = arg.match(/^tri=([\d.]+):([\d.]+):([\d.]+)$/)) {
+        } else if (matches = arg.match(/^tri=([\d-.]+):([\d-.]+):([\d-.]+)$/)) {
             context.tours[0].push([Number(matches[1]),Number(matches[2]),Number(matches[3])]);
             context.tournum = 0;
         } else if (matches = arg.match(/^theta=([\d]+)$/)) {
@@ -280,6 +282,8 @@ PolyContext.prototype.processoptions = function(options) {
             context.texturefile = matches[1];
         } else if (matches = arg.match(/^normal=(.+)$/)) {
             context.normalfile = matches[1];
+        } else if (matches = arg.match(/^function=(.+)$/)) {
+            context.fname = matches[1];
         } else if (matches = arg.match(/^off=(.+)$/)) {
             context.offfile = matches[1];
         } else if (matches = arg.match(/^vertexstyle=(.+)$/)) {
@@ -288,6 +292,9 @@ PolyContext.prototype.processoptions = function(options) {
             context.offoptions.vertexwidth = Number(matches[1]);
         } else if (matches = arg.match(/^edgewidth=([\d.]+)$/)) {
             context.offoptions.edgewidth = Number(matches[1]);
+        } else if (matches = arg.match(/^off.([^=]+)=([-\d.]+)$/)) {
+            console.log("Got", matches[1], matches[2])
+            context.offoptions[matches[1]] = Number(matches[2]);
         } else if (matches = arg.match(/^allvertices$/)) {
             context.offoptions.allvertices = true;
         } else if (matches = arg.match(/^alledges$/)) {
@@ -363,12 +370,15 @@ PolyContext.prototype.handleKey = function(key) {
     case 'n':
         this.donormalize = !this.donormalize;
         break;
+    case 'N':
+        this.shownormals = !this.shownormals;
+        break;
     case 'i':
         this.invertinc = -this.invertinc;
         break;
     case 'f':
-        this.colorstyle = (this.colorstyle+1) % this.numcolorstyles;
-        this.geometry.colorsNeedUpdate = true;
+        this.colorstyle = (this.colorstyle+1) % this.numcolorstyles
+        this.updatecolors()
         break;
     case 'T':
         if (context.texture) {
@@ -390,14 +400,20 @@ PolyContext.prototype.handleKey = function(key) {
         break;
     case 'u':
         this.coloroffset += 1;
-        this.geometry.colorsNeedUpdate = true;
+        this.updatecolors()
         break;
+    case 'V':
+        this.verbose = !this.verbose
+        if (this.verbose) console.log("Verbose on")
+        update = PolyContext.updateNone
+        break
     case 'v':
         this.coloroffset-1;
-        this.geometry.colorsNeedUpdate = true;
+        this.updatecolors()
         break;
     case 'c':
         this.docompound = !this.docompound;
+        this.needclone = true;
         break;
     case 'x':
         this.dochiral = !this.dochiral;
@@ -503,9 +519,11 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
     if (this.drawface0) {
         this.drawface0(plist);
     } else {
+        // Work out texture coordinates - these should be coherent across the face
+        // We use the first point, relative to the centre as the u-axis
         var uaxis;
         for (var i = 0; i < plist.length; i++) {
-            // Some points may coincide with the centre to try and find
+            // Some points may coincide with the centre so try and find
             // one that doesn't. In the unlikely event of failing, we just
             // assert currently.
             if (Vector.taxi(plist[i],centre) > 1e-4) {
@@ -513,18 +531,19 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
                 break;
             }
         }
-        console.assert(uaxis,"No suitable u axis for texture coordinate generation");
+        //console.assert(uaxis,"No suitable u axis for texture coordinate generation");
+        if (!uaxis) uaxis = [1,0,0] // eg. if the face is degenerate
         var vaxis = Vector.normalize(Vector.cross(centre,uaxis)); // centre is normal
-        if (parity) vaxis = Vector.negate(vaxis);
+        if (parity) vaxis = Vector.negate(vaxis); // Mirror image
         var uvs = [];
         for (var i = 0; i < plist.length; i++) {
             var u = 0.5 + Vector.dot(Vector.sub(plist[i],centre),uaxis);
             var v = 0.5 + Vector.dot(Vector.sub(plist[i],centre),vaxis);
             uvs.push(new THREE.Vector2(u,v));
         }
-        //console.log(JSON.stringify(uvs));
         var uvcentre = new THREE.Vector2(0.5,0.5);
         if (plist.length == 3) {
+            // Should do this when some edges are degenerate too.
             this.drawtriangle(plist[0],plist[1],plist[2],
                               [uvs[0],uvs[1],uvs[2]],
                               centre,facetype,index,tridepth);
@@ -800,8 +819,8 @@ PolyContext.prototype.drawcompound = function(drawpolyhedron) {
     }
 }
 
-function load(file, options, context) {
-    console.log("Loading " + file);
+function offload(file, context) {
+    if (context.verbose) console.log("Loading " + file);
     var manager = new THREE.LoadingManager();
     manager.onProgress = function ( item, loaded, total ) {
 	//console.log( item, loaded, total );
@@ -809,7 +828,7 @@ function load(file, options, context) {
     var onProgress = function ( xhr ) {
 	if ( xhr.lengthComputable ) {
 	    var percentComplete = xhr.loaded / xhr.total * 100;
-	    console.log( Math.round(percentComplete, 2) + '% downloaded' );
+	    if (context.verbose) console.log( Math.round(percentComplete, 2) + '% downloaded' );
 	}
     };
 
@@ -819,13 +838,16 @@ function load(file, options, context) {
         console.log(xhr);
     };
     var loader = new THREE.OFFLoader( manager );
-    loader.load( file, options, function ( geometry ) {
-        context.basegeom = geometry;
+    loader.load( file, context.basegeom, context.offoptions, function () {
+        var geometry = context.basegeom
         context.numcolorstyles = 3; // Yuk.
         context.basecolors = [];
         for (var i = 0; i < geometry.faces.length; i++) {
-            context.basecolors.push(geometry.faces[i].color);
+            context.basecolors.push(geometry.faces[i].color.clone());
         }
+        if (context.offclone) context.needclone = true
+        context.offclone = false
+        context.updatecolors();
         context.update(PolyContext.UpdateModel);
     }, onProgress, onError );
 }
@@ -907,14 +929,12 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
         context.material.needsUpdate = true;
     }
 
-    var geometry = new THREE.Geometry();
-    geometry.dynamic = true;
-    this.geometry = geometry;
     
     var scene = new THREE.Scene(); 
-    var mesh = new THREE.Mesh(geometry, material);
+    var mesh = new THREE.Mesh(new THREE.Geometry(), material);
+    mesh.geometry.dynamic = true;
+    context.basegeom = mesh.geometry
     scene.add(mesh);
-    this.mainobject = mesh;
     
     var light = new THREE.DirectionalLight(0xffffff, 0.8);
     light.position.set(0,1,1);
@@ -933,6 +953,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
     this.update = function(type) {
         if (type != PolyContext.UpdateNone) {
             if (needupdate == PolyContext.UpdateNone) {
+               if (context.verbose) console.log("Requesting animation frame")
                 requestAnimationFrame(context.render);
             }
             if (needupdate < type) {
@@ -959,15 +980,14 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
         //console.log(context.camera.position);
     }
 
-    this.showoff = function() {
+    this.offcompound = function() {
         var basegeom = context.basegeom;
-        if (!basegeom) return;
         var basecolors = context.basecolors;
         var geometry = new THREE.Geometry;
         function drawpolyhedron(init,trans) {
             //console.log("drawpolyhedron " + context.compound + " " + trans);
             if (context.docompound && !context.pointset) {
-                console.log("Generating pointset with " + basegeom.vertices.length + " points")
+                if (context.verbose) console.log("Generating pointset with " + basegeom.vertices.length + " points")
                 var pointset = [];
                 for (var i = 0; i < basegeom.vertices.length; i++) {
                     var v = basegeom.vertices[i];
@@ -979,7 +999,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                 PointSet.sort(pointset);
                 context.pointset = pointset;
             }
-            var m;
+            var m, det;
             if (context.transmat) {
                 console.assert(!init, "init set when matrix supplied");
                 var t = context.transmat;
@@ -988,55 +1008,84 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                       t[1][0], t[1][1], t[1][2], 0,
                       t[2][0], t[2][1], t[2][2], 0,
                             0,       0,       0, 1);
+                det = m.determinant();
             }
             for (var i = 0; i < basegeom.faces.length; i++) {
                 if (context.colorstyle === 0) {
-                    basegeom.faces[i].color = white;
+                    basegeom.faces[i].color.copy(basecolors[i]);
                 } else if (context.colorstyle === 1) {
-                    basegeom.faces[i].color = basecolors[i];
+                    basegeom.faces[i].color.copy(white);
                 } else {
-                    basegeom.faces[i].color = compoundColors[context.compound%compoundColors.length];
+                    var compound = context.compound
+                    console.assert(compound != undefined)
+                    basegeom.faces[i].color.copy(compoundColors[(context.coloroffset + compound)%compoundColors.length]);
                 }
             }
             // This sure is a lousy hack
             // For reflections, need to change order of triangles so they stay front facing,
             // else it seems something flips the normals around.
-            if (trans.length%2 == 1) {
-                console.assert(!init);
-                for (var i = 0; i < basegeom.faces.length; i++) {
-                    //basegeom.faces[i].normal.negate();
-                    var f = basegeom.faces[i];
-                    var tmp = f.b; f.b = f.c; f.c = tmp;
-                    var uvs = basegeom.faceVertexUvs[0][i];
-                    tmp = uvs[1]; uvs[1] = uvs[2]; uvs[2] = tmp;
+            // It would be better if Geometry.merge did this itself.
+            function flipface(i) {
+                var f = basegeom.faces[i];
+                var tmp = f.b; f.b = f.c; f.c = tmp;
+                if (f.vertexNormals.length > 0) {
+                    tmp = f.vertexNormals[1]
+                    f.vertexNormals[1] = f.vertexNormals[2]
+                    f.vertexNormals[2] = tmp
                 }
+                if (f.vertexColors.length > 0) {
+                    tmp = f.vertexColors[1]
+                    f.vertexColors[1] = f.vertexColors[2]
+                    f.vertexColors[2] = tmp
+                }
+                var uvs = basegeom.faceVertexUvs[0][i];
+                tmp = uvs[1]; uvs[1] = uvs[2]; uvs[2] = tmp;
+                var normals = basegeom.faceVertexUvs[0][i];
+                tmp = uvs[1]; uvs[1] = uvs[2]; uvs[2] = tmp;
+            }
+                
+            if (det < 0) {
+                console.assert(!init);
+                for (var i = 0; i < basegeom.faces.length; i++) flipface(i);
             }
             geometry.merge(basegeom,m);
-            if (trans.length%2 == 1) {
+            if (det < 0) {
                 console.assert(!init);
-                for (var i = 0; i < basegeom.faces.length; i++) {
-                    //basegeom.faces[i].normal.negate();
-                    var f = basegeom.faces[i];
-                    var tmp = f.b; f.b = f.c; f.c = tmp;
-                    var uvs = basegeom.faceVertexUvs[0][i];
-                    tmp = uvs[1]; uvs[1] = uvs[2]; uvs[2] = tmp;
-                }
+                for (var i = 0; i < basegeom.faces.length; i++) flipface(i)
             }
         }
         //var start = Date.now();
         context.drawcompound(drawpolyhedron);
         //console.log("t=" + (Date.now() - start));
-        scene.remove(context.mainobject);
-        context.mainobject.geometry.dispose();
-        context.mainobject.geometry = geometry;
-        // Do I really need to set any of these?
-        geometry.verticesNeedUpdate = true;
-        geometry.elementsNeedUpdate = true;
-        geometry.normalsNeedUpdate = true;
-        geometry.colorsNeedUpdate = true;
-        scene.add(context.mainobject);
+        scene.remove(mesh);
+        mesh.geometry.dispose();
+        mesh.geometry = geometry;
+        scene.add(mesh);
     }
-    if (this.offfile) load(this.offfile, this.offoptions, context);
+    this.updatecolors = function() {
+        var geometry = mesh.geometry
+        if (context.offfile) {
+            var ncolors = context.basecolors.length // Bleughh!
+            // Bzzt! Repetition!
+            for (var i = 0; i < geometry.faces.length; i++) {
+                if (context.colorstyle === 0) {
+                    geometry.faces[i].color.copy(context.basecolors[i%ncolors]);
+                } else if (context.colorstyle === 1) {
+                    geometry.faces[i].color.copy(white);
+                } else {
+                    var compound = 0
+                    geometry.faces[i].color.copy(compoundColors[(context.coloroffset + compound)%compoundColors.length]);
+                }
+            }
+        }
+        geometry.colorsNeedUpdate = true;
+    }
+
+    if (this.offfile) {
+        // Load the offfile into the main geometry object
+        context.offclone = true
+        offload(this.offfile, context);
+    }
 
     // Keep track of time
     this.stopwatch = new PolyContext.Stopwatch(this.initt,
@@ -1094,35 +1143,40 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
     // TBD: Defining a window event handler here seems wrong
     window.addEventListener("keypress",
                             function (event) {
-                                var handled = context.handleKey(String.fromCharCode(event.charCode));
-                                if (handled) event.preventDefault();
+                                if (!event.ctrlKey) {
+                                    // Ignore event if control key pressed.
+                                    var handled = context.handleKey(String.fromCharCode(event.charCode));
+                                    if (handled) event.preventDefault();
+                                }
                             },
                             false);
 
     this.drawpoint0 = function (x,y,z) {
+        var geometry = mesh.geometry
         // If we need to add new points to the geometry
         // make sure that we redraw properly.
-        if (this.npoints == this.geometry.vertices.length) {
-            this.geometry.vertices.push(new THREE.Vector3());
+        if (this.npoints == geometry.vertices.length) {
+            geometry.vertices.push(new THREE.Vector3());
             this.needclone = true;
         }
-        var u = this.geometry.vertices[this.npoints];
+        var u = geometry.vertices[this.npoints];
         u.x = x; u.y = y; u.z = z;
         return this.npoints++;
     }
 
     this.drawtriangle0 = function(a,b,c,tcoords,type,index) {
         console.assert(tcoords);
-        if (this.nfaces == this.geometry.faces.length) {
-            this.geometry.faces.push(new THREE.Face3());
-            console.assert(this.geometry.faceVertexUvs[0].length === this.nfaces);
-            this.geometry.faceVertexUvs[0].push([0,0,0]);
+        var geometry = mesh.geometry
+        if (this.nfaces == geometry.faces.length) {
+            geometry.faces.push(new THREE.Face3());
+            console.assert(geometry.faceVertexUvs[0].length === this.nfaces);
+            geometry.faceVertexUvs[0].push([0,0,0]);
             this.needclone = true;
         }
-        var face = this.geometry.faces[this.nfaces];
+        var face = geometry.faces[this.nfaces];
         face.a = a; face.b = b; face.c = c;
         if (tcoords) {
-            var uv = this.geometry.faceVertexUvs[0][this.nfaces];
+            var uv = geometry.faceVertexUvs[0][this.nfaces];
             uv[0] = tcoords[0];
             uv[1] = tcoords[1];
             uv[2] = tcoords[2];
@@ -1148,17 +1202,72 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                          Vector.normalize(Vector.cross(sym[0],sym[1]))];
     }
 
+    var lambdainc = -0.01
+    var maxlambda = 1
+    var minlambda = -1
+    var rotationx = 0
+    var rotationy = 0
     this.render = function (tstamp) {
-        if (needupdate == PolyContext.UpdateNone) {
-            return;
-        }
-        setTimeout(function() {
-            requestAnimationFrame( context.render );
-        }, 1000 / 25 );
+        var geometry = mesh.geometry
+        if (needupdate == PolyContext.UpdateNone) return;
+        setTimeout(function() { requestAnimationFrame( context.render ); },
+                   1000 / 25 );
         if (needupdate == PolyContext.UpdateModel) {
             if (context.offfile) {
-                context.showoff();
-                //console.log(context.compound);
+                if (context.stopwatch.running) {
+                    var reload = false;
+                    if (context.offoptions.lambda != undefined) {
+                        context.offoptions.lambda += lambdainc;
+                        if (context.offoptions.lambda > maxlambda) {
+                            lambdainc = -lambdainc;
+                            context.offoptions.lambda = maxlambda
+                            //context.stopwatch.running = false;
+                        }
+                        if (context.offoptions.lambda < minlambda) {
+                            lambdainc = -lambdainc;
+                            context.offoptions.lambda = minlambda
+                            //context.stopwatch.running = false;
+                        }
+                        reload = true
+                    }
+                    if (context.offoptions.theta != undefined){
+                        context.offoptions.theta += 0.01
+                        reload = true
+                    }
+                    if (reload) offload(context.offfile,context);
+                }
+                if (context.docompound) {
+                    context.offcompound();
+                    if (context.verbose) console.log("Compound of", context.compound);
+                } else if (context.needclone) {
+                    // Make sure all geometry changes are registered
+                    if (context.verbose) console.log("Cloning")
+                    scene.remove(mesh);
+                    mesh.geometry.dispose()
+                    mesh.geometry = context.basegeom.clone()
+                    context.basegeom = mesh.geometry
+                    context.updatecolors();
+                    scene.add(mesh);
+                    context.needclone = false;
+                } else {
+                    geometry.verticesNeedUpdate = true;
+                    geometry.elementsNeedUpdate = true;
+                    geometry.normalsNeedUpdate = true;
+                    geometry.colorsNeedUpdate = true;
+                    geometry.uvsNeedUpdate = true;
+                }
+                //console.log(mesh.geometry)
+                //console.log(context.basegeom)
+            } else if (context.fname) {
+                if (context.verbose) console.log("Calling ", context.fname)
+                var off = context[context.fname](context.offoptions)
+                console.assert(off);
+                THREE.OFFLoader.display(off,mesh.geometry,context.offoptions)
+                geometry.verticesNeedUpdate = true;
+                geometry.elementsNeedUpdate = true;
+                geometry.normalsNeedUpdate = true;
+                geometry.colorsNeedUpdate = true;
+                geometry.uvsNeedUpdate = true;
             } else {
                 // Make sure we have the right color setting in material
                 // We should only do this when material properties actually change
@@ -1170,15 +1279,6 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                     context.drawpolyhedron();
                 }
                 context.drawcompound(drawpolyhedron);
-                if (0) {
-                    geometry.faceVertexUvs[0] = []
-                    for (var i = 0; i < geometry.faces.length ; i++) {
-                        geometry.faceVertexUvs[0].push(
-                            [new THREE.Vector2(0,0),
-                             new THREE.Vector2(0,1),
-                             new THREE.Vector2(1,1)])
-                    }
-                }
                 // Post process...
                 geometry.verticesNeedUpdate = true;
                 geometry.elementsNeedUpdate = true;
@@ -1195,36 +1295,35 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                     geometry.vertices.length = context.npoints;
                     geometry.faces.length = context.nfaces;
                     geometry.faceVertexUvs[0].length = context.nfaces;
-                    geometry.buffersNeedUpdate = true; // If buffer lengths have changed
-                    if (1) {
-                        var newgeometry = geometry.clone()
-                        //newgeometry.dynamic = true;
-                        scene.remove(mesh);
-                        geometry.dispose();
-                        geometry = newgeometry;
-                        context.geometry = geometry;
-                        // Reusing the mesh object seems OK
-                        mesh.geometry = geometry; 
-                        scene.add(mesh);
-                    }
+                    var newgeometry = geometry.clone()
+                    scene.remove(mesh);
+                    geometry.dispose();
+                    geometry = newgeometry;
+                    // Reusing the mesh object seems OK
+                    mesh.geometry = geometry; 
+                    scene.add(mesh);
                 }
             }
-            if (0) {
-                // Should remove old edges unless we want a persistence of vision effect.
-                if (context.normalshelper) {
-                    scene.remove(context.normalshelper);
-                    context.normalshelper.geometry.dispose();
-                }
-                context.normalshelper = new THREE.FaceNormalsHelper(context.mainobject, 2, 0x00ff00, 1);
+            // Display model normals
+            // Remove old edges unless we want a persistence of vision effect.
+            if (context.normalshelper) {
+                scene.remove(context.normalshelper);
+                context.normalshelper.geometry.dispose();
+            }
+            if (context.shownormals) {
+                context.normalshelper = new THREE.FaceNormalsHelper(mesh, 2, 0x00ff00, 1);
                 scene.add(context.normalshelper);
             }
         }
         needupdate = PolyContext.UpdateNone;
+
         // This is handled by THREE.js so we don't need to update model
-        if (context.dorotate && context.mainobject) {
+        if (context.dorotate) {
             //var now = Date.now(); // TBD: use time here
-            context.mainobject.rotation.x += 0.004; 
-            context.mainobject.rotation.y += 0.002;
+            rotationx += 0.004
+            rotationy += 0.002
+            mesh.rotation.x = rotationx; 
+            mesh.rotation.y = rotationy;
             needupdate = PolyContext.UpdateView;
         }
         // Both z rotation and inversion should be driven

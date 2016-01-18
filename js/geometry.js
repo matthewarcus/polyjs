@@ -149,6 +149,12 @@ var Geometry = {};
                     -Math.sin(theta)*p[0] + Math.cos(theta)*p[1],
                     p[2]];
         },
+        // Rotate about y-axis (for compounds)
+        yrot: function(p,theta) {
+            return [Math.cos(theta)*p[0] + Math.sin(theta)*p[2],
+                    p[1],
+                    -Math.sin(theta)*p[0] + Math.cos(theta)*p[2]]
+        },
         intersection: function(p,q,r) {
             var P = Vector.cross(q,r);
             var Q = Vector.cross(r,p);
@@ -177,6 +183,14 @@ var Geometry = {};
             var v2 = reflect(p,q,[0,0,1]);
             return [v0,v1,v2];
         },
+        // "barycentric" here just means interpreting
+        // coordinates [a,b,c] as the weighted sum of aA+bB+cC
+        // where A,B,C are the vertices of some triangle.
+        // "trilinear" means defining a point by its distance
+        // from 3 different planes, or equivalently, by the dot product
+        // with 3 different vectors.
+        // if p,q,r is a (spherical) triangle, then P = q x r, Q = r x p, R = p x q
+        // are normals to its sides
         tri2bary: function(tri,p,q,r) {
             var P = Vector.cross(q,r);
             var Q = Vector.cross(r,p);
@@ -297,8 +311,10 @@ var Geometry = {};
             var t = 1-rz*rz-ry*ry;
             if (t < 0) t = 0; // Clamp to avoid rounding problems
             var r = [Math.sqrt(t),ry,rz];
-            // Reverse q and r to get a +ve OpenGL triangle to start with
-            return [p,r,q];
+            // This used to reverse q and r to get a +ve OpenGL triangle to start
+            // with, but that mucks up the tri coordinates, and anyway the complicated
+            // stuff needs drawing both sides.
+            return [p,q,r];
         }
 
         var a = angles[0], b = angles[1], c = angles[2];
@@ -567,6 +583,7 @@ var Geometry = {};
                 if (Math.abs(bary[0] > eps)) tmp = s0;
                 else if (Math.abs(bary[1] > eps)) tmp = s1;
                 else if (Math.abs(bary[2] > eps)) tmp = s2;
+                else tmp = s0;
                 norm = Vector.mid(s,tmp);
             }
             normlen = Vector.length(norm);
@@ -782,7 +799,7 @@ var Geometry = {};
             console.log(schwarz.snuba)
         }
     }
-
+    
     // Set up the external symbols.
     Geometry.Vector = Vector;
     Geometry.PointSet = PointSet;
