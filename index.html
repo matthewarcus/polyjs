@@ -42,10 +42,10 @@ THE SOFTWARE.
         var context = new PolyContext(options);
         context.runOnCanvas(canvas,canvas.width,canvas.height);
         }
-        run(canvas1, "args=3:2:5/3&sym=3:2:2&colorstyle=1&t=7&rotate&run");
+        run(canvas1, "args=3:5/3:2&sym=3:2:2&colorstyle=1&t=7&rotate&run");
         run(canvas2, "args=3:2:5/3&colorstyle=3&z=8&t=7&dual&rotate&run");
-        run(canvas3, "args=2:3:3&sym=2:3:5&compound&chiral&theta=4&rotate&tour=1&run&texture=images/208.jpg");
-        run(canvas4, "args=2:2:37/19&sym=3:2:4&colorstyle=3&snub&both&rotate&run");
+        run(canvas3, "args=2:3:3&sym=2:3:5&compound&chiral&theta=4&rotate&run&texture=images/208.jpg");
+        run(canvas4, "args=2:2:37/19&sym=3:2:4&colorstyle=3&t=6&snub&both&rotate&run");
       </script>
     </div>
     <p>
@@ -67,12 +67,12 @@ THE SOFTWARE.
   coordinates within each triangle to determine the polyhedron
   vertices, with the trilinear coordinates being converted to
   barycentric (or maybe trihedral or even triplanar - the weighted sum
-  of three points anyway) for actually generating the points. Vertices for snub
+  of three points anyway, which I suppose makes them a non-orthogonal
+  basis for ℝ³) for actually generating the points. Vertices for snub
   polyhedra are found by iterative approximation. We can also use this
   information to generate duals and stellations as well as using the
   Schwarz triangle tiling to apply further symmetry operations to
   basic polyhedra to create compounds. 
-
 <p>
   Using the excellent <a href="http://threejs.org">THREE.js</a>
   Javascript library from <a href="http://mrdoob.com/">Mr.doob</a>, we
@@ -88,22 +88,39 @@ THE SOFTWARE.
       the point from the three sides eg. (1,1,1) is the central point
       (perhaps they really should be called triplanar coordinates). We
       don't have to stay within the triangle though and in fact the
-      point can be anywhere in space.
+      point can be anywhere in space (or rather, since we scale vertex
+      points to have length 1, anywhere on the sphere where a sequence
+      of coordinates such as [-1,1,0], [1,1,0], [1,-1,0], [-1,-1,0]
+      corresponds to a great circle route).
     <ul>
-      <li><a href="poly.html?args=3:5:2&sym=3:4:2&colorstyle=1&rotate&tour=1&run">[3 5 2]</a>: Convex icosahedral symmetry</li>
-      <li><a href="poly.html?args=3:5:2&sym=3:4:2&colorstyle=1&rotate&tour=2&run">[3 5 2]</a>: Outside the Schwarz triangle</li>
-      <li><a href="poly.html?args=5/4:5/4:5/4&sym=2:3:5&colorstyle=1&rotate&run">[5/4 5/4 5/4]</a></li>
+      <li><a href="poly.html?args=3:5:2&sym=3:4:2&colorstyle=1&rotate&run">[3 5 2]</a>: Convex icosahedral symmetry</li>
+      <li><a href="poly.html?args=2:3:4&tri=-1:1:0&tri=1:1:0&tri=1:-1:0&tri=-1:-1:0&colorstyle=1&rotate&run">[3
+      4 2]</a>: Moving around the kaleidoscope often corresponds to
+      well-know transformations of polyhedra, here we see the
+      truncation cycle of the cube (currently retroflex edges are not
+      drawn quite right, hence the Maltese Cross appearance - but see
+      "Semiregular polygons" below).</li>
+      <li><a href="poly.html?args=2:3:5&sym=3:4:2&colorstyle=1&rotate&tour=2&run">[2
+      3 5]</a>: More outside the Schwarz triangle. The resemblance to
+      <a href="http://www.polytope.net/hedrondude/home.htm">Jonathan
+      Bower</a>'s <a href="http://www.polytope.net/hedrondude/tribe.png">"tribes"</a>
+      probably isn't coincidence.</li>
+      <li><a href="poly.html?args=5/4:5/4:5/4&sym=2:3:5&tour=1&colorstyle=1&rotate&run">[5/4 5/4 5/4]</a></li>
       <li><a href="poly.html?args=2:5/3:3/2&sym=3:2:4&colorstyle=1&rotate&run">[2 5/3 3/2]</a></li>
-      <li><a href="poly.html?args=3:5/3:2&sym=3:2:4&colorstyle=1&t=7&tour=1&rotate&run">[3 5/3 2]</a></li>
+      <li><a href="poly.html?args=3:5/3:2&sym=3:2:4&colorstyle=1&t=7&rotate&run">[3 5/3 2]</a></li>
       <li><a href="poly.html?args=3:5/3:5/2&sym=3:2:4&colorstyle=7&snub&t=7&rotate&texture=images/202.jpg">[3 5/3 5/2]</a> U69 looks good in granite</li>
       <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&t=7&snub&colorstyle=1&rotate">U72</a> A particularly fine snub figure</li>
-      <li><a href="poly.html?args=2:3:5&colorstyle=1&hide=4&tri=1:0:0&tri=0:1:1&snub&rotate&run">Jitterbug transformation</a> Like many polyhedral transformations, this corresponds to a particular route through the (snub) Schwarz triangle - here the triangle is <2 x x> and the route is from 1,0,0 to 0,1,1 (via 1,1,1 - the main snub figure).
+      <li><a href="poly.html?args=2:3:5&colorstyle=1&hide=4&tri=1:0:0&tri=0:1:1&snub&rotate&run">Jitterbug
+      transformation</a> Another polyhedral transformations that
+      corresponds to a particular route through a Schwarz triangle
+      (snub this time) - here the triangle is [2 x x] and the route is
+      from 1,0,0 to 0,1,1 (via 1,1,1 - the main snub figure).
       <li><a href=poly.html?args=2:3/2:5/4&sym=2:2:1&hide=3&hide=4&compound&snub&tri=1:0:0&tri=1:0.5:0.5&tri=1:1:1&tri=0.618:1:1&tri=0.5:1:1&tri=0.618:1:1&tri=1:1:1&tri=1:0.5:0.5&run&rotate>Verheyen's Vampire</a> A "dipolygonid" transformation, with two sets of oppositely oriented icosahedral triangles. That 0.618 in the trilinear coordinates can't be a coincidence.</li> 
       <!-- <li><a href="poly.html?args=3:5/3:5/2&sym=3:2:4&colorstyle=1&tri=1:1:1&snub&rotate">[3 5/3 5/2]</a></li> -->
     </ul>
     We can also show dual figures, and also use inversion to display the original polyhedra, but in a different way:
     <ul>
-      <li><a href="poly.html?args=3:5/3:2&colorstyle=3&z=8&tour=1&t=7&dual&rotate&run">[3 5/3 2]: dual figures</a></li>
+      <li><a href="poly.html?args=3:5/3:2&colorstyle=3&z=8&t=7&dual&rotate&run">[3 5/3 2]: dual figures</a></li>
       <li><a href="poly.html?args=3:5:2&colorstyle=3&regionstyle=1&dual&snub&rotate&run">[3 5 2]: snub dual regions</a></li>
       <li><a href="poly.html?args=3:5:2&colorstyle=7&dual&invert&texture=images/220.jpg&run&rotate">[3 5 2]: inverted duals</a> - a nice symmetric effect with texturing (each Schwarz triangle uses the same texture coordinates).</li>
     </ul>
@@ -118,9 +135,9 @@ THE SOFTWARE.
     A few other examples:
     <ul>
       <li><a href="poly.html?args=2:2:37/19&sym=3:4:2&colorstyle=2&tri=1:1:1&snub&compound&rotate">[2 2 37/19]: A nice compound</a></li>
-      <li><a href="poly.html?args=2:3:5/3&sym=2:3:5&colorstyle=1&stellate&rotate&z=20&t=3&tour=1">Stellation - final only.</a></li>
-      <li><a href="poly.html?args=2:3:5&sym=2:5:3&colorstyle=1&rotate&compound&zrotate&run&t=7&tour=1">Compound animation</a></li>
-      <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&snub&colorstyle=4&t=7&tour=1&z=0.01&tridepth=4&rotate&run&invert">!!!</a></li>
+      <li><a href="poly.html?args=2:3:5/3&sym=2:3:5&colorstyle=1&stellate&rotate&z=20&t=3">Stellation - final only.</a></li>
+      <li><a href="poly.html?args=2:3:5&sym=2:5:3&colorstyle=1&rotate&compound&zrotate&run&t=7">Compound animation</a></li>
+      <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&snub&colorstyle=4&t=7&z=0.01&tridepth=4&rotate&run&invert">!!!</a></li>
     </ul>
     <h3>OFF files</h3>
     We can load files in OFF format (for example, as generated by the excellent <a href="http://www.antiprism.com/">Antiprism</a> tools) and display with various embellishments. Compounding is also possible (though may be slow if the OFF file contains many vertices):
@@ -143,8 +160,10 @@ THE SOFTWARE.
     For a polyhedron with all edge lengths equal, we can replace each
     edge with a hinged pair of brackets that allows the polyhedron to
     be collapsed like an umbrella (the angle of the bracket is chosen
-    to preserve the angle made at the centre). If anyone has a name
-    for this, let me know.
+    to preserve the angle made at the centre). This is appararently
+    the <a href="https://en.wikipedia.org/wiki/Hoberman_sphere">Hoberman
+    sphere</a>. Makes a
+    nice <a href="http://www.amazon.co.uk/Hoberman-MS801-Mega-Sphere/dp/B00005N5FV/">toy</a>.
     <ul>
       <li><a href="poly.html?off=off/tet.off&nofaces&off.lambda=1&rotate&run">Tetrahedron edge linkage</a>
       <li><a href="poly.html?off=off/ico.off&nofaces&off.lambda=1&rotate&run">Icosahedron edge linkage</a>
@@ -157,18 +176,34 @@ THE SOFTWARE.
     paper</a>
     <ul>
       <li><a href="poly.html?off=off/tet.off&off.theta=0&allvertices&alledges&rotate&run">Dipolygonid tetrahedron</a>
-      <li><a href="poly.html?off=off/ico.off&off.theta=0&allvertices&alledges&rotate&run">Dipolygonid icosahedron</a> Verheyen's Vampire, again
+      <li><a href="poly.html?off=off/ico.off&off.theta=0&allvertices&alledges&rotate&run">Dipolygonid icosahedron</a> Verheyen's Vampire, (again)
       <li><a href="poly.html?off=off/icosid.off&off.theta=0&allvertices&alledges&z=4&rotate&run">Classic icosahedral jitterbug</a>
       <li><a href="poly.html?off=off/rh_icosid.off&off.theta=0&z=5&allvertices&alledges&rotate&run">Tripolygonid rhombicosidodecahedron?</a>
         The triangles don't stay the same size, but remarkably, the other faces do, as well as remaining flat.
+      <li><a href="poly.html?off=off/u34.off&off.theta=0&alledges&allvertices&rotate&run">U34</a>
+      <li><a href="poly.html?off=off/u36.off&off.theta=0&alledges&allvertices&rotate&run">U36</a>
+      <!-- <li><a href="poly.html?off=off/u37.off&off.theta=0&alledges&allvertices&rotate&run">U37</a> -->
+      <li><a href="poly.html?off=off/u38.off&off.theta=0&alledges&allvertices&rotate&run">U38</a>
+      <li><a href="poly.html?off=off/u47.off&off.theta=0&alledges&allvertices&rotate&run">U47</a>
+      <li><a href="poly.html?off=off/u54.off&off.theta=0&alledges&allvertices&rotate&run">U54</a>
+      <!-- <li><a href="poly.html?off=off/u58.off&off.theta=0&alledges&allvertices&rotate&run">U58</a> -->
+      <!-- <li><a href="poly.html?off=off/u66.off&off.theta=0&alledges&allvertices&rotate&run">U58</a> -->
     </ul>
     Some other configurations:
     <ul>
       <li><a href="poly.html?function=loadbf&z=6&rotate&run">Another
-      Jitterbug rendition</a> This one worked out from basic geometry.
-      <li><a href="poly.html?function=theorem&run">Theorem: joins of
-      opposite edge bisectors in a tetrahedron are coincident</a> The
-      yellow vertices clearly form a parallelogram.
+          Jitterbug rendition</a> This one constructed from the basic geometry.
+      <li><a href="poly.html?function=polygon&off.n=6&off.m=1&run">Semiregular
+          polygons</a> I wanted to test algorithms for drawing retroflex
+        edges, but this is quite fun in its own right. Not sure if
+        there is a standard meaning of "semiregular" for polygons - here we mean
+        alternate edges and angles are the same, with vertices at
+        2imπ/n ± θ, for 0 <= i < n, with θ varying.
+      <li><a href="poly.html?function=polygon&off.n=17&off.m=7&run">17/7
+      polygon</a> - construct that!
+      <li><a href="poly.html?function=theorem&run">A nice Euclidean
+      theorem</a>: joins of opposite edge bisectors in a tetrahedron
+      are coincident. The yellow vertices clearly form a parallelogram.
     </ul>
     <h3>Uniform Compounds</h3>
     Instead of using a set of Schwarz triangles to draw a polyhedron,
@@ -261,6 +296,9 @@ THE SOFTWARE.
       <li>17/1/15: Added dipolygonid examples</li>
       <li>17/1/15: Default symmetry now 2:2:1 ie. one mirror image</li>
       <li>17/1/15: Bugfix: don't try and handle control characters</li>
-      <li>17/1/15: Bugfix: Trilinear coordinates had second & third values swapped</li>
+      <li>17/1/15: Bugfix: Trilinear coordinates had second & third
+        values swapped</li>
+      <li>24/1/15: Added polygon example
+      <li>24/1/15: Added cube truncation example
 </body> 
 </html>

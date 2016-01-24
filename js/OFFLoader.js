@@ -39,7 +39,7 @@ THREE.OFFLoader.prototype = {
 	loader.load( url, function ( text, other ) {
             var off = scope.parse(text)
             if (options.theta != undefined) {
-                off = THREE.OFFLoader.vamp(off)
+                off = THREE.OFFLoader.dipolygonid(off)
                 THREE.OFFLoader.twistertransform(off,options.theta)
             } else if (options.lambda != undefined) {
                 off = THREE.OFFLoader.edgelinkage(off,options.lambda)
@@ -587,6 +587,7 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
                     var p1 = vlist[(i+1)%n];
                     var uv0 = uvs[i];
                     var uv1 = uvs[(i+1)%n];
+                    //normal = makenormal(centroid,vertices[p1],vertices[p0]) // Per edge normal
                     if (reversefaces) addface(icentroid, p1, p0, uvcentroid, uv1, uv0, normal, color);
                     else addface(icentroid, p0, p1, uvcentroid, uv0, uv1, normal, color);
                 }
@@ -715,10 +716,15 @@ THREE.OFFLoader.edgelinkage = function (off, lambda) {
             addedge(pivot,p2,Color.yellow);
         }
     })
+    // I guess 'this' here is THREE.OFFLoader
+    if (newfaces.length == 0 && !this.alerted) {
+        alert("No edges found for edge linkage");
+        this.alerted = true;
+    }
     return { vertices: newvertices, faces: newfaces }
 }
 
-THREE.OFFLoader.vamp0 = function (off) {
+THREE.OFFLoader.dipolygonid0 = function (off) {
     var vadd = THREE.OFFLoader.Utils.vadd
     var vsub = THREE.OFFLoader.Utils.vsub
     var vdiv = THREE.OFFLoader.Utils.vdiv
@@ -767,7 +773,7 @@ THREE.OFFLoader.vamp0 = function (off) {
 
 // Take an ordinary OFF model, with up to 3 set of proper faces,
 // and each vertex being part of one of each type of face.
-THREE.OFFLoader.vamp = function (off) {
+THREE.OFFLoader.dipolygonid = function (off) {
     var vadd = THREE.OFFLoader.Utils.vadd
     var vsub = THREE.OFFLoader.Utils.vsub
     var vdiv = THREE.OFFLoader.Utils.vdiv
@@ -781,12 +787,26 @@ THREE.OFFLoader.vamp = function (off) {
     var newfaces = []
     var emap = new Map()
     var vmap = new Map()
-    var primarylength;
-    var secondarylength;
+    // Represent the type of a face by the dot product of
+    // the first two edges. This will distinguish eg. a pentagon
+    // from a pentagram, unlike plain edge count.
+    function facetype(face) {
+        var vlist = face.vlist        
+        var type = vdot(vsub(vertices[vlist[1]], vertices[vlist[0]]),
+                        vsub(vertices[vlist[2]], vertices[vlist[1]]));
+        return type;
+    }
+    function eqtype(type1,type2) {
+        return Math.abs(type1-type2) < 1e-4;
+    }
+    var primarytype;
+    var secondarytype;
     faces.forEach(function(face,findex) {
         var vlist = face.vlist
-        if (!primarylength) primarylength = vlist.length
-        if (vlist.length == primarylength) {
+        if (vlist.length < 3) return;
+        var type = facetype(face)
+        if (!primarytype) primarytype = type
+        if (eqtype(type,primarytype)) {
             // Generate new edge points for each primary face
             var newvlist = vlist.map(function(v) {
                 var i = newvertices.length
@@ -803,8 +823,8 @@ THREE.OFFLoader.vamp = function (off) {
                 var nv1 = newvlist[i], nv2 = newvlist[(i+1)%newvlist.length]
                 emap.set(v1*1000+v2, { face: findex, index: i, v1: nv1, v2: nv2 })
             }
-        } else if (vlist.length >= 3) {
-            if (!secondarylength) secondarylength = vlist.length
+        } else {
+            if (!secondarytype) secondarytype = type
             var valid = true;
             var newvlist = []
             for (var i = 0; i < vlist.length; i++) {
@@ -820,19 +840,15 @@ THREE.OFFLoader.vamp = function (off) {
                 newvlist.push(nv1)
             }
             if (valid) {
-                var color, type;
-                if (face.vlist.length == secondarylength) {
-                    color = Color.green;
-                    type = 1;
+                if (eqtype(type,secondarytype)) {
+                    newfaces.push({ vlist: newvlist, color: Color.green, type: 1 })
                 } else {
-                    color = Color.yellow;
-                    type = 2;
+                    newfaces.push({ vlist: newvlist, color: Color.yellow, type: 2 })
                 }
-                newfaces.push({ vlist: newvlist, color: color, type: type })
             }
         }
     })
-    if (secondarylength == undefined) {
+    if (secondarytype == undefined) {
         // Didn't find a second face type, duplicate the first set of faces
         faces.forEach(function(face,findex) {
             var vlist = face.vlist
@@ -857,7 +873,8 @@ THREE.OFFLoader.vamp = function (off) {
 
 // Rotate the "primary" faces of the off model, then translate
 // each face enough to make the "secondary" faces have the same
-// edge width. 
+// edge width. Sometimes there isn't a solution. For three faces
+// occasionally it works, but usually a face is distorted.
 THREE.OFFLoader.twistertransform = function (off, theta) {
     var vadd = THREE.OFFLoader.Utils.vadd
     var vsub = THREE.OFFLoader.Utils.vsub
@@ -914,6 +931,7 @@ THREE.OFFLoader.twistertransform = function (off, theta) {
     var n1 = normals[1]
     var v0 = vertices[face1.vlist[0]]
     var v1 = vertices[face1.vlist[1]]
+    //console.log(vsub(v1,v0).length())
     // Now find k such that |v0 + k*n0 - v1 - k*n1| = 1
     // ie. |(v0-v1) + k(n0-n1)| = 1
     // put V = v0-v1, N = n0-n1
@@ -929,6 +947,12 @@ THREE.OFFLoader.twistertransform = function (off, theta) {
     var C = vdot(V,V)-1
     var d = B*B - 4*A*C
     console.assert(d >= 0)
+    if (d < 0 && false) {
+        console.log(d,A,B,C)
+        console.log("V",V,"N",N)
+        console.log(v0,v1)
+        console.log(n0,n1)
+    }
     if (d < 0) d = 0;
     // This solution gives the right answer for theta = 0
     var k = (-B - Math.sqrt(d))/(2*A)
@@ -947,5 +971,176 @@ THREE.OFFLoader.twistertransform = function (off, theta) {
         for (var j = 0; j < vlist.length; j++) {
             vertices[vlist[j]].add(t)
         }
+    }
+}
+
+THREE.OFFLoader.makeStar = function(N,M,theta) {
+    var vector = THREE.OFFLoader.Utils.vector;
+    N = N || 3
+    M = M || 1
+    var star = [];
+    for (var i = 0; i < N; i++) {
+        // Make the star vector length 1 and inclined at 45%
+        // so we get a nice sinusoidal polar zono.
+        var k = 1/Math.sqrt(2)
+        var x = k*Math.cos(2*Math.PI*i*M/N);
+        var z = k*Math.sin(2*Math.PI*i*M/N);
+        var y = k*theta;
+        var v = vector(x,y,z)
+        star.push(v);
+    }
+    return star;
+}
+
+// Geo. Hart's excellent zonohedron algorithm
+THREE.OFFLoader.starZonohedron = function(star,off,newstar) {
+    var vadd = THREE.OFFLoader.Utils.vadd
+    var vsub = THREE.OFFLoader.Utils.vsub
+    var vdiv = THREE.OFFLoader.Utils.vdiv
+    var vmul = THREE.OFFLoader.Utils.vmul
+    var vdot = THREE.OFFLoader.Utils.vdot
+    var vcross = THREE.OFFLoader.Utils.vcross
+    var vnegate = THREE.OFFLoader.Utils.vnegate
+    var vector = THREE.OFFLoader.Utils.vector
+    var N = star.length;
+    function apply(star,component) {
+        var result = vector()
+        console.assert(star.length == component.length);
+        for (var i = 0; i < star.length; i++) {
+            result.add(vmul(star[i],component[i]))
+        }
+        return result;
+    }
+    function addvector(p) {
+        console.assert(newstar)
+        // This linear scan doesn't really cut the mustard
+        // but will do for now.
+        for (var i = 0; i < newstar.length; i++) {
+            if (vcross(newstar[i],p).length() < 1e-5) {
+                return;
+            }
+        }
+        //console.log("Adding",p)
+        newstar.push(p);
+    }
+    function addvertex(p) {
+        for (var i = 0; i < off.vertices.length; i++) {
+            if (off.vertices[i].distanceTo(p) < 1e-4) {
+                return i;
+            }
+        }
+        i = off.vertices.length;
+        off.vertices.push(p)
+        return i;
+    }
+    function addface(fvs) {
+        console.assert(off)
+        var vlist = []
+        for (var i = 0; i < fvs.length;i++) {
+            vlist.push(addvertex(fvs[i]))
+        }
+        off.faces.push({ vlist:vlist })
+    }
+    // Each component is an N-vector of {-1,0,1}
+    for (var sj = 1; sj < N; sj++) {
+        for (var si = 0; si < sj; si++) {
+            var face = []
+            // Normal direction not critical here
+            var normal = vcross(star[si],star[sj]);
+            var edges = []
+            for (var k = 0; k < N; k++) {
+                var t = vdot(normal,star[k]);
+                var eps = 1e-6;
+                if (t < -eps) face[k] = -1;
+                else if (t > eps) face[k] = 1;
+                else {
+                    face[k] = 0;
+                    edges.push(k);
+                }
+            }
+            // edges are indices of the face edges
+            var K = edges.length;
+            console.assert(K >= 2);
+            if (edges[0] == si) { // Need to ensure uniqueness
+                var npoints = 2*K;
+                var p = []
+                var centre = apply(star,face); // Also the face normal
+                if (K == 2 && false) {
+                    // easy case
+                    //p[0] = centre - star[edges[0]] - star[edges[1]];
+                    //p[1] = centre - star[edges[0]] + star[edges[1]];
+                    p[0] = vsub(centre,vadd(star[edges[0]],star[edges[1]]));
+                    p[1] = vsub(centre,vsub(star[edges[0]],star[edges[1]]));
+                    p[2] = vadd(centre,vadd(star[edges[0]],star[edges[1]]));
+                    p[3] = vadd(centre,vsub(star[edges[0]],star[edges[1]]));
+                    //p[3] = centre + star[edges[0]] - star[edges[1]];
+                    if (newstar) {
+                        for (var j = 0; j < 4; j++) {
+                            //if (p[j].y > obj.maxy) obj.maxy = p[j].y;
+                            addvector(p[j]);
+                        }
+                    }
+                    if (off) {
+                        for (var i = 0; i < npoints; i++) {
+                            var p0 = p[i];
+                            var p1 = p[(i+1)%npoints];
+                            addtriangle(centre, p0, p1);
+                            addtriangle(vnegate(centre), vnegate(p1), vnegate(p0));
+                        }
+                    }
+                } else {
+                    p = [];
+                    var fvs = []
+                    for (var i = 0; i < K; i++) {
+                        p.push(vcross(star[edges[i]], centre));
+                    }
+                    for (var i = 0; i < K; i++) {
+                        var eps = 1e-4;
+                        var pvec = vector();
+                        for (var j = 0; j < K; j++) {
+                            var t = vdot(p[j],star[edges[i]]);
+                            if (t > eps) {
+                                pvec.add(star[edges[j]]);
+                            } else {
+                                pvec.sub(star[edges[j]]);
+                            }
+                        }
+                        // We could save a little work here by just adding
+                        // one point, but this will do for now.
+                        var p0 = vadd(centre,pvec);
+                        var p1 = vsub(centre,pvec);
+                        fvs.push(p0);
+                        fvs.push(p1);
+                    }
+                    if (newstar) {
+                        for (var i = 0; i < fvs.length; i++) {
+                            addvector(fvs[i]);
+                        }
+                    }
+                    if (off) {
+                        // Need to sort the face vertices so they
+                        // are in the right order.
+                        var xaxis = vsub(fvs[0],centre);
+                        var yaxis = vcross(xaxis,centre);
+                        xaxis.normalize();
+                        yaxis.normalize();
+                        for (var i = 0; i < fvs.length; i++) {
+                            // Nice JS trick - I can add an ad-hoc "angle" field in
+                            // to the vectors in fvs & use that as a sorting key
+                            var fv = vsub(fvs[i],centre)
+                            fvs[i].angle = Math.atan2(vdot(fv,yaxis),vdot(fv,xaxis))
+                        }
+                        fvs.sort(function(v0,v1) { return v0.angle < v1.angle; })
+                        addface(fvs);
+                        // Opposite face - need to reverse vertex ordering to
+                        // keep correct orientation
+                        addface(fvs.map(vnegate).reverse())
+                    }
+                }
+            }
+        }
+    }
+    if (off) {
+        console.log("StarZono:", off.faces.length, off.vertices.length);
     }
 }

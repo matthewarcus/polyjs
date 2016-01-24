@@ -188,6 +188,120 @@ PolyContext.prototype.theorem = function(options) {
     return { vertices: vertices, faces: faces }
 }
 
+PolyContext.prototype.zonohedron = function(options) {
+    var N = options.n || 3
+    var M = options.m || 1
+    var k = options.k || 0
+    var off = { vertices: [], faces: [] }
+    var scale = 1;
+    if (options.theta != undefined) scale = Math.sin(options.theta);
+    var star = THREE.OFFLoader.makeStar(N,M,scale)
+    var newstar = []
+    for (var i = 0; i < k; i++) {
+        star.forEach(function(v) { v.normalize(); })
+        THREE.OFFLoader.starZonohedron(star,null,newstar)
+        star = newstar; newstar = []
+    }
+    THREE.OFFLoader.starZonohedron(star,off)
+    return off;
+}
+
+// Draw a semi-regular polygon.
+// Assumes first 2 edges are typical of all and that the edge centre
+// is closest point to origin (both are the case with Wythoff polyhedra). 
+// Polygon sides are 2pi*n/m-theta, 2pi*n/m+theta, theta may be
+// negative to give a retroflex side which should be drawn as a sort
+// of ear shape.
+PolyContext.prototype.polygon = function(options) {
+    var vector = THREE.OFFLoader.Utils.vector
+    var vadd = THREE.OFFLoader.Utils.vadd
+    var vsub = THREE.OFFLoader.Utils.vsub
+    var vdiv = THREE.OFFLoader.Utils.vdiv
+    var vmul = THREE.OFFLoader.Utils.vmul
+    var vdot = THREE.OFFLoader.Utils.vdot
+    var Color = THREE.OFFLoader.Utils.Color;
+    var cos = Math.cos
+    var sin = Math.sin
+   
+    var vertices = []
+    var faces = []
+    function vertex(i) {
+        while (i < 0) i += 2*n
+        while (i >= 2*n) i -= 2*n
+        return vertices[i]
+    }
+    function addvertex(v,color) {
+        var i = vertices.length
+        vertices.push(v);
+        if (color) faces.push({ vlist: [i], color: color })
+        return i
+    }
+    function addface(vlist,color) {
+        faces.push({ vlist: vlist, color: color });
+    }
+    if (options.theta === undefined) options.theta = 0
+    var theta = options.theta
+    var n = options.n || 5
+    var m = options.m || 1
+    //console.log("polygon",n,m,theta)
+    for (var i = 0; i < n; i++) {
+        var a = i*Math.PI*2*m/n;
+        addvertex(vector(sin(a-theta),cos(a-theta),0),Color.red)
+        addvertex(vector(sin(a+theta),cos(a+theta),0),Color.green)
+    }
+    var origin = addvertex(vector(0,0,0))
+    // Compute intersection of adjoining edges
+    // If edge side of centre, use that (might be
+    // further out from edge or other side of centre,
+    // either of which is OK.
+    var efacts = [], eindex;
+    for (var i = 0; i < 2; i++) {
+        var p0 = vertex(i-1) // previous vertex
+        var p1 = vertex(i), p2 = vertex(i+1) // Edge vertices
+        var c = vdiv(vadd(p1,p2),2) // Edge centre
+        var e = vsub(p2,p1) // Edge vector
+        var v = vsub(p1,p0) // Previous edge
+        var k = -vdot(p0,e)/vdot(v,e) 
+        var q = vadd(p0,vmul(v,k)) // Intersection with centre line
+        // q = kc => q.c = k*c.c => k = q.c/c.c
+        var efact = vdot(q,c)/vdot(c,c)
+        efacts.push(efact)
+        if (0 < efact && efact < 1) eindex = i; // Need an ear
+    }
+    // New list of vertices
+    var vlist = []
+    for (var i = 0; i < 2*n; i++) {
+        var p1 = vertex(i)
+        var p2 = vertex(i+1)
+        var c = vdiv(vadd(p1,p2),2)
+        var q = vmul(c,efacts[i%2])
+        addvertex(c,Color.blue)
+        var qi = addvertex(q,Color.cyan)
+        addface([i,(i+1)%(2*n)],Color.yellow)
+        if (i%2 == eindex) vlist.push(qi)
+    }
+    console.assert(vlist.length == 0 || vlist.length == n)
+    if (vlist.length > 0) {
+        // Draw the ear as a separate triangle
+        for (var i = 0; i < n; i++) {
+            var p0 = (2*i+eindex)%(2*n)
+            var p1 = (2*i+eindex+1)%(2*n)
+            var q0 = vlist[i]
+            var q1 = vlist[(i+1)%n]
+            addface([q0,p0,p1],Color.white)
+            addface([origin,q0,q1],Color.white)
+        }
+    } else {
+        // Easy case, draw straight out from centre
+        for (var i = 0; i < 2*n; i++) {
+            var p0 = i
+            var p1 = (i+1)%(2*n)
+            addface([origin,p0,p1],Color.white)
+        }
+    }
+    return { vertices: vertices, faces: faces }
+}
+
 //eqtest()
 // function doit() {
 //     vertices.push([0,0,0]);

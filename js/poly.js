@@ -114,10 +114,15 @@ function PolyContext(options) {
         [], // Can be set from query params
         [ [1,0,0],[1,1,0],[0,1,0],[0,1,1],[0,0,1],[1,0,1],[1,0,0],
           [1,1,1],[1,1,0],[0,1,0],[1,1,1],[0,1,1],[0,0,1],[1,1,1],[1,0,1] ],
-        [ [2,-1,0], [1,0,0], [0,1,0], [-1,2,0],
-          [0,2,-1], [0,1,0], [0,0,1], [0,-1,2],
-          [-1,0,2], [0,0,1], [1,0,0], [2,0,-1] ],
-        [ [2,-1,0],[0,-1,2],[-1,0,2], [-1,2,0],[0,2,-1],[2,0,-1] ]
+        [
+            [-1,1,0],[0,1,0],[1,0,0],[1,-1,0],
+            [-1,0,1],[0,0,1],[1,0,0],[1,0,-1],
+            [0,-1,1],[0,0,1],[0,1,0],[0,1,-1],
+            [1,-1,-1],[1,0,0],[0,1,1],[-1,1,1],
+            [-1,1,-1],[0,1,0],[1,0,1],[1,-1,1],
+            [-1,-1,1],[0,0,1],[1,1,0],[1,1,-1],
+            
+        ], 
     ];
     this.tournum = 1;
 
@@ -293,7 +298,7 @@ PolyContext.prototype.processoptions = function(options) {
         } else if (matches = arg.match(/^edgewidth=([\d.]+)$/)) {
             context.offoptions.edgewidth = Number(matches[1]);
         } else if (matches = arg.match(/^off.([^=]+)=([-\d.]+)$/)) {
-            console.log("Got", matches[1], matches[2])
+            //console.log("Got", matches[1], matches[2])
             context.offoptions[matches[1]] = Number(matches[2]);
         } else if (matches = arg.match(/^allvertices$/)) {
             context.offoptions.allvertices = true;
@@ -1011,7 +1016,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                 det = m.determinant();
             }
             for (var i = 0; i < basegeom.faces.length; i++) {
-                if (context.colorstyle === 0) {
+                if (context.colorstyle === 0 && basecolors) {
                     basegeom.faces[i].color.copy(basecolors[i]);
                 } else if (context.colorstyle === 1) {
                     basegeom.faces[i].color.copy(white);
@@ -1213,28 +1218,36 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
         setTimeout(function() { requestAnimationFrame( context.render ); },
                    1000 / 25 );
         if (needupdate == PolyContext.UpdateModel) {
-            if (context.offfile) {
-                if (context.stopwatch.running) {
-                    var reload = false;
-                    if (context.offoptions.lambda != undefined) {
-                        context.offoptions.lambda += lambdainc;
-                        if (context.offoptions.lambda > maxlambda) {
-                            lambdainc = -lambdainc;
-                            context.offoptions.lambda = maxlambda
-                            //context.stopwatch.running = false;
+            var reload = false;
+            if (context.offoptions.theta != undefined){
+                context.offoptions.theta += 0.01
+                reload = true
+            }
+            if (context.fname || context.offfile) {
+                if (context.fname) {
+                    if (context.verbose) console.log("Calling ", context.fname)
+                    var off = context[context.fname](context.offoptions)
+                    console.assert(off);
+                    THREE.OFFLoader.display(off,context.basegeom,context.offoptions)
+                } else {
+                    // Kick off another off load
+                    if (context.stopwatch.running) {
+                        if (context.offoptions.lambda != undefined) {
+                            context.offoptions.lambda += lambdainc;
+                            if (context.offoptions.lambda > maxlambda) {
+                                lambdainc = -lambdainc;
+                                context.offoptions.lambda = maxlambda
+                                //context.stopwatch.running = false;
+                            }
+                            if (context.offoptions.lambda < minlambda) {
+                                lambdainc = -lambdainc;
+                                context.offoptions.lambda = minlambda
+                                //context.stopwatch.running = false;
+                            }
+                            reload = true
                         }
-                        if (context.offoptions.lambda < minlambda) {
-                            lambdainc = -lambdainc;
-                            context.offoptions.lambda = minlambda
-                            //context.stopwatch.running = false;
-                        }
-                        reload = true
+                        if (reload) offload(context.offfile,context);
                     }
-                    if (context.offoptions.theta != undefined){
-                        context.offoptions.theta += 0.01
-                        reload = true
-                    }
-                    if (reload) offload(context.offfile,context);
                 }
                 if (context.docompound) {
                     context.offcompound();
@@ -1258,16 +1271,6 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                 }
                 //console.log(mesh.geometry)
                 //console.log(context.basegeom)
-            } else if (context.fname) {
-                if (context.verbose) console.log("Calling ", context.fname)
-                var off = context[context.fname](context.offoptions)
-                console.assert(off);
-                THREE.OFFLoader.display(off,mesh.geometry,context.offoptions)
-                geometry.verticesNeedUpdate = true;
-                geometry.elementsNeedUpdate = true;
-                geometry.normalsNeedUpdate = true;
-                geometry.colorsNeedUpdate = true;
-                geometry.uvsNeedUpdate = true;
             } else {
                 // Make sure we have the right color setting in material
                 // We should only do this when material properties actually change
