@@ -462,7 +462,7 @@ PolyContext.prototype.handleKey = function(key) {
 // so there is some significant optimizations possible here.
 // Return the index in the geometries list of points.
 
-PolyContext.prototype.drawpoint = function(p,offset) {
+PolyContext.prototype.drawpoint = function(p,offset,facefact) {
     var Vector = Geometry.Vector;
     var w = p[3] || 1; // Homogeneous coords
     // For fun, do the explode before the inversion
@@ -477,10 +477,17 @@ PolyContext.prototype.drawpoint = function(p,offset) {
     }
     var x = p[0]/w, y = p[1]/w, z = p[2]/w;
     var explode = this.explode;
-    if (offset && explode != 0) {
-        x += explode*offset[0];
-        y += explode*offset[1];
-        z += explode*offset[2];
+    if (offset) {
+        if (explode != 0) {
+            x += explode*offset[0];
+            y += explode*offset[1];
+            z += explode*offset[2];
+        } else if (facefact) {
+            // Give each facetype a slightly different offset
+            x += facefact*offset[0];
+            y += facefact*offset[1];
+            z += facefact*offset[2];
+        }
     }
     if (this.transmat) {
         p = [x,y,z];
@@ -498,9 +505,10 @@ var ttt = 0.5;
 PolyContext.prototype.drawtriangle = function(p,q,r,tcoords,offset,type,i,n) {
     var Vector = Geometry.Vector;
     if (n == 0) {
-        var index0 = this.drawpoint(p,offset);
-        var index1 = this.drawpoint(q,offset);
-        var index2 = this.drawpoint(r,offset);
+        var facefact = (this.compound+type)*0.0001 // Reduce stitching
+        var index0 = this.drawpoint(p,offset,facefact);
+        var index1 = this.drawpoint(q,offset,facefact);
+        var index2 = this.drawpoint(r,offset,facefact);
         this.drawtriangle0(index0,index1,index2,tcoords,type,i);
     } else {
         // Vary ttt for slightly tacky rotating effect.
