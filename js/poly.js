@@ -587,7 +587,7 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
             // Triangulation phase
             // Now we must work out if we have any retroflex edges
             // Since the face is "semiregular" we just look at first two.
-            if (facetype < 4 && plist.length > 4) {
+            if (false && facetype < 4 && plist.length > 4) {
                 // Only do this for regular poly faces & only if more
                 // than 4 sides (otherwise normal drawing out from the
                 // centre is OK).
