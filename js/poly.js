@@ -49,8 +49,13 @@
 // *Fix snubcentre for degenerate snub triangles
 // *Report errors on texture & off file loading
 // *Normal maps
+// *Fix flicker from coplanar faces in polyhedra
+// *Draw retroflex edges properly in polyhedra
+// !Better mechanism to pass parameters to OFF functions
+// !Sort out retroflex snub region edges bug
+// Fix flicker in OFF file geometries
+// Generate OFF geometries for polyhedra
 // Sort out the mess of geometry reuse/cloning etc.
-// Do something about flicker from coplanar faces
 // Speed control
 // Dimmer switch
 // Bump maps
@@ -60,7 +65,6 @@
 // Keyboard input for mobile
 // Options for eg. drawing snub faces with centre or not
 // Separate coplanar faces in explode.
-// Sort out retrograde snub region edges bug
 // More efficient use of geometry objects
 // Proper uvs for hemi faces & stellations
 // Reuse point geometry between compounds
@@ -530,15 +534,15 @@ PolyContext.prototype.drawtriangle = function(p,q,r,tcoords,offset,type,i,n) {
 PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,parity) {
     var Vector = Geometry.Vector;
     if (this.drawface0) {
-        this.drawface0(plist);
+        this.drawface0(plist); // Call alternative function, if defined
     } else {
         // Work out texture coordinates - these should be coherent across the face
+        // Firstly, get orthogonal axes in face plane.
         // We use the first point, relative to the centre as the u-axis
         var uaxis;
         for (var i = 0; i < plist.length; i++) {
             // Some points may coincide with the centre so try and find
-            // one that doesn't. In the unlikely event of failing, we just
-            // assert currently.
+            // one that doesn't. If we fail, the face is degenerate anyway
             if (Vector.taxi(plist[i],centre) > 1e-4) {
                 uaxis = Vector.normalize(Vector.sub(plist[i],centre));
                 break;
@@ -548,6 +552,8 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
         if (!uaxis) uaxis = [1,0,0] // eg. if the face is degenerate
         var vaxis = Vector.normalize(Vector.cross(centre,uaxis)); // centre is normal
         if (parity) vaxis = Vector.negate(vaxis); // Mirror image
+
+        // Compute uvs for face points
         var uvs = [];
         for (var i = 0; i < plist.length; i++) {
             var u = 0.5 + Vector.dot(Vector.sub(plist[i],centre),uaxis);
@@ -555,33 +561,84 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
             uvs.push(new THREE.Vector2(u,v));
         }
         var uvcentre = new THREE.Vector2(0.5,0.5);
+
+        if (this.dohemi) {
+            // Do this first as might modify plist
+            // TBD: Proper texture coordinates!
+            var uvs = [new THREE.Vector2(0,0),
+                       new THREE.Vector2(1,0),
+                       new THREE.Vector2(0,1)];
+            for (var i = 0; i < plist.length; i++) {
+                var p1 = plist[i];
+                var p2 = plist[(i+1)%plist.length];
+                if (Vector.taxi(p1,p2) > 1e-4) {
+                    this.drawtriangle([0,0,0],p1,p2,uvs,
+                                      centre,4,index,tridepth);
+                }
+            }
+        }
+
         if (plist.length == 3) {
             // Should do this when some edges are degenerate too.
             this.drawtriangle(plist[0],plist[1],plist[2],
                               [uvs[0],uvs[1],uvs[2]],
                               centre,facetype,index,tridepth);
         } else {
-            for (var j = 0; j < plist.length; j++) {
-                var p1 = plist[j];
-                var p2 = plist[(j+1)%plist.length];
-                if (Vector.taxi(p1,p2) > 1e-4) {
-                    this.drawtriangle(centre,p1,p2,
-                                      [uvcentre,uvs[j],uvs[(j+1)%plist.length]],
-                                      centre,facetype,index,tridepth);
+            // Triangulation phase
+            // Now we must work out if we have any retroflex edges
+            // Since the face is "semiregular" we just look at first two.
+            if (facetype < 4 && plist.length > 4) {
+                // Only do this for regular poly faces & only if more
+                // than 4 sides (otherwise normal drawing out from the
+                // centre is OK).
+                // We don't need to do this for every vertex - can do
+                // calculation once for all the faces of a particular type.
+                var newplist = []
+                var newuvs = []
+                var mod = function(i,n) {
+                    i %= n
+                    if (i < 0) i += n
+                    return i;
+                }
+                for (var i = 0; i < plist.length; i++) {
+                    // Look for a retroflex edge: adjacent edges intersect
+                    // edge side of centre, so use that as new vertex and
+                    // draw the edge as a sort of ear.
+                    var p0 = plist[mod(i-1,plist.length)] // previous vertex
+                    var p1 = plist[i]
+                    var p2 = plist[mod(i+1,plist.length)] // Edge vertices
+                    var c = Vector.mid(p1,p2) // Edge centre
+                    var e = Vector.sub(p2,p1) // Edge vector
+                    var v = Vector.sub(p1,p0) // Previous edge
+                    var k = -Vector.dot(p0,e)/Vector.dot(v,e) 
+                    var q = Vector.add(p0,Vector.mul(v,k)) // Intersection with centre line
+                    // q = kc => q.c = k*c.c => k = q.c/c.c
+                    var efact = Vector.dot(q,c)/Vector.dot(c,c)
+                    if (0 < efact && efact < 1) {
+                        //console.log("Need an ear:",efact)
+                        // q is new point
+                        var u = 0.5 + Vector.dot(Vector.sub(q,centre),uaxis);
+                        var v = 0.5 + Vector.dot(Vector.sub(q,centre),vaxis);
+                        var newuv = new THREE.Vector2(u,v);
+                        newuvs.push(newuv)
+                        newplist.push(q)
+                        this.drawtriangle(q,p1,p2,
+                                          [newuv,uvs[i],uvs[(i+1)%plist.length]],
+                                          centre,facetype,index,tridepth);
+                    }
+                }
+                if (newplist.length > 0) {
+                    plist = newplist;
+                    uvs = newuvs;
                 }
             }
-        }
-        if (this.dohemi) {
-            // TBD: Proper texture coordinates!
-            var uvs = [new THREE.Vector2(0,0),
-                       new THREE.Vector2(1,0),
-                       new THREE.Vector2(0,1)];
-            for (var j = 0; j < plist.length; j++) {
-                var p1 = plist[j];
-                var p2 = plist[(j+1)%plist.length];
-                if (Vector.taxi(p1,p2) > 1e-4) {
-                    this.drawtriangle([0,0,0],p1,p2,uvs,
-                                      centre,4,index,tridepth);
+            for (var i = 0; i < plist.length; i++) {
+                var p1 = plist[i];
+                var p2 = plist[(i+1)%plist.length];
+                if (Vector.taxi(p1,p2) > 1e-4) { // Don't draw if degenerate
+                    this.drawtriangle(centre,p1,p2,
+                                      [uvcentre,uvs[i],uvs[(i+1)%plist.length]],
+                                      centre,facetype,index,tridepth);
                 }
             }
         }
@@ -1239,6 +1296,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                     THREE.OFFLoader.display(off,context.basegeom,context.offoptions)
                 } else {
                     // Kick off another off load
+                    // This is awful
                     if (context.stopwatch.running) {
                         if (context.offoptions.lambda != undefined) {
                             context.offoptions.lambda += lambdainc;
