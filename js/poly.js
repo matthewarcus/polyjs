@@ -587,7 +587,7 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
             // Triangulation phase
             // Now we must work out if we have any retroflex edges
             // Since the face is "semiregular" we just look at first two.
-            if (false && facetype < 4 && plist.length > 4) {
+            if (this.doretroflex && facetype < 4 && plist.length > 4) {
                 // Only do this for regular poly faces & only if more
                 // than 4 sides (otherwise normal drawing out from the
                 // centre is OK).
@@ -613,10 +613,11 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
                     var k = -Vector.dot(p0,e)/Vector.dot(v,e) 
                     var q = Vector.add(p0,Vector.mul(v,k)) // Intersection with centre line
                     // q = kc => q.c = k*c.c => k = q.c/c.c
-                    var efact = Vector.dot(q,c)/Vector.dot(c,c)
+                    var c0 = Vector.sub(c,centre)
+                    var q0 = Vector.sub(q,centre)
+                    var efact = Vector.dot(q0,c0)/Vector.dot(c0,c0)
                     if (0 < efact && efact < 1) {
-                        //console.log("Need an ear:",efact)
-                        // q is new point
+                        // q is new point to draw triangle to edge from
                         var u = 0.5 + Vector.dot(Vector.sub(q,centre),uaxis);
                         var v = 0.5 + Vector.dot(Vector.sub(q,centre),vaxis);
                         var newuv = new THREE.Vector2(u,v);
@@ -630,6 +631,9 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
                 if (newplist.length > 0) {
                     plist = newplist;
                     uvs = newuvs;
+                } else {
+                    // No retroflex needed for other faces.
+                    this.doretroflex = false;
                 }
             }
             for (var i = 0; i < plist.length; i++) {
@@ -735,6 +739,7 @@ PolyContext.prototype.drawfaces = function() {
             }
         } else {
             var facepoints = schwarz.faces[type];
+            this.doretroflex = true; // Gets set to false if we don't need it
             for (var i = 0; i < facepoints.length; i++) {
                 var fpoints = facepoints[i];
                 if (fpoints && (!this.dosnubify || fpoints.length > 4)) {
