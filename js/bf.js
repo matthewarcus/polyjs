@@ -1,4 +1,4 @@
-PolyContext.prototype.loadbf = function(options) {
+PolyContext.prototype.loadbf = function(off,options) {
     var vector = THREE.OFFLoader.Utils.vector
     var vnegate = THREE.OFFLoader.Utils.vnegate
     var vadd = THREE.OFFLoader.Utils.vadd
@@ -142,7 +142,81 @@ PolyContext.prototype.loadbf = function(options) {
     return {vertices: [], faces: [] }
 }
 
-PolyContext.prototype.theorem = function(options) {
+PolyContext.prototype.desargues = function(off,options) {
+    var vector = THREE.OFFLoader.Utils.vector
+    var vadd = THREE.OFFLoader.Utils.vadd
+    var vsub = THREE.OFFLoader.Utils.vsub
+    var vdiv = THREE.OFFLoader.Utils.vdiv
+    var vmul = THREE.OFFLoader.Utils.vmul
+    var vdot = THREE.OFFLoader.Utils.vdot
+    var vcross = THREE.OFFLoader.Utils.vcross
+    var vnormalize = THREE.OFFLoader.Utils.vnormalize
+    var Color = THREE.OFFLoader.Utils.Color;
+    var vertices = []
+    var faces = []
+    function addvertex(v,color) {
+        var i = vertices.length
+        vertices.push(v);
+        if (color) faces.push({ vlist: [i], color: color })
+        return i
+    }
+    function addface(vlist,color) {
+        faces.push({ vlist: vlist, color: color });
+    }
+    function addline(p,q,r) {
+        addface([p,q],Color.white)
+        addface([q,r],Color.white)
+        addface([r,p],Color.white)
+    }
+    function intersect(p0,p1,q0,q1) {
+        var n = vsub(p1,p0)
+        var m = vsub(q1,q0)
+        // Want p0 + kn = q0 + km
+        // or
+        // kn = q0 - p0 + km
+        // k(n x m) = (q0 - p0) x m
+        var t1 = vcross(n,m)
+        var t2 = vcross(vsub(q0,p0),m)
+        console.log(vcross(t1,t2).length())
+        var k = vdot(t1,t2)/vdot(t1,t1)
+        return vadd(p0,vmul(n,k))
+    }
+    var a0 = vector(-2,0,-2)
+    var b0 = vector(0,-1,-2)
+    var c0 = vector(-2,-2,-2)
+    var k0 = 1.333;
+    var k1 = 1.618;
+    var k2 = 2;
+    var a1 = vmul(a0,k0)
+    var b1 = vmul(b0,k1)
+    var c1 = vmul(c0,k2)
+    var d = intersect(a0,b0,a1,b1)
+    var e = intersect(b0,c0,b1,c1)
+    var f = intersect(c0,a0,c1,a1)
+    var O = addvertex(vector(0,0,0),Color.blue)
+    var A0 = addvertex(a0,Color.red);
+    var B0 = addvertex(b0,Color.red);
+    var C0 = addvertex(c0,Color.red);
+    var A1 = addvertex(a1,Color.yellow);
+    var B1 = addvertex(b1,Color.yellow);
+    var C1 = addvertex(c1,Color.yellow);
+    var D = addvertex(d,Color.green);
+    var E = addvertex(e,Color.green);
+    var F = addvertex(f,Color.green);
+    addline(O,A0,A1)
+    addline(O,B0,B1)
+    addline(O,C0,C1)
+    addline(A0,B0,D)
+    addline(A1,B1,D)
+    addline(B0,C0,E)
+    addline(B1,C1,E)
+    addline(C0,A0,F)
+    addline(C1,A1,F)
+    addline(D,E,F)
+    return { vertices: vertices, faces: faces }
+}
+
+PolyContext.prototype.theorem = function(off,options) {
     var vector = THREE.OFFLoader.Utils.vector
     var vadd = THREE.OFFLoader.Utils.vadd
     var vdiv = THREE.OFFLoader.Utils.vdiv
@@ -188,7 +262,7 @@ PolyContext.prototype.theorem = function(options) {
     return { vertices: vertices, faces: faces }
 }
 
-PolyContext.prototype.zonohedron = function(options) {
+PolyContext.prototype.zonohedron = function(off,options) {
     var N = options.n || 3
     var M = options.m || 1
     var k = options.k || 0
@@ -212,7 +286,7 @@ PolyContext.prototype.zonohedron = function(options) {
 // Polygon sides are 2pi*n/m-theta, 2pi*n/m+theta, theta may be
 // negative to give a retroflex side which should be drawn as a sort
 // of ear shape.
-PolyContext.prototype.polygon = function(options) {
+PolyContext.prototype.polygon = function(off,options) {
     var vector = THREE.OFFLoader.Utils.vector
     var vadd = THREE.OFFLoader.Utils.vadd
     var vsub = THREE.OFFLoader.Utils.vsub
@@ -239,8 +313,8 @@ PolyContext.prototype.polygon = function(options) {
     function addface(vlist,color) {
         faces.push({ vlist: vlist, color: color });
     }
-    if (options.theta === undefined) options.theta = 0
-    var theta = options.theta
+    var theta = options.theta || 0
+    options.theta = theta + 0.01
     var n = options.n || 5
     var m = options.m || 1
     //console.log("polygon",n,m,theta)
@@ -257,7 +331,8 @@ PolyContext.prototype.polygon = function(options) {
     var efacts = [], eindex;
     for (var i = 0; i < 2; i++) {
         var p0 = vertex(i-1) // previous vertex
-        var p1 = vertex(i), p2 = vertex(i+1) // Edge vertices
+        var p1 = vertex(i)
+        var p2 = vertex(i+1) // Edge vertices
         var c = vdiv(vadd(p1,p2),2) // Edge centre
         var e = vsub(p2,p1) // Edge vector
         var v = vsub(p1,p0) // Previous edge
@@ -300,6 +375,130 @@ PolyContext.prototype.polygon = function(options) {
         }
     }
     return { vertices: vertices, faces: faces }
+}
+
+PolyContext.prototype.dipolygonid = function(off,options) {
+    if (off) {
+        off = THREE.OFFLoader.dipolygonid(off)
+        THREE.OFFLoader.twistertransform(off,options)
+    }
+    return off
+}
+
+PolyContext.prototype.hoberman = function(off,options) {
+    if (!off) return
+    var vadd = THREE.OFFLoader.Utils.vadd
+    var vsub = THREE.OFFLoader.Utils.vsub
+    var vdiv = THREE.OFFLoader.Utils.vdiv
+    var vmul = THREE.OFFLoader.Utils.vmul
+    var vdot = THREE.OFFLoader.Utils.vdot
+    var vcross = THREE.OFFLoader.Utils.vcross
+    var vdist = THREE.OFFLoader.Utils.vdist
+    var Color = THREE.OFFLoader.Utils.Color
+    var vertices = off.vertices
+    var nvertices = vertices.length
+    var faces = off.faces
+    var newvertices = []
+    var newfaces = []
+    var lambda = options.lambda || 1
+    options.lambdainc = options.lambdainc || 0.01
+    options.lambda = lambda + options.lambdainc
+    var eps = 1e-4
+    if (1-eps < lambda && lambda < 1+eps) { lambda = 1-eps; }
+    if (-1-eps < lambda && lambda < -1+eps) { lambda = -1+eps }
+    function addedge(p1,p2,color) {
+        newfaces.push({ vlist: [p1,p2], color: color })
+    }
+    function addvertex(p,color) {
+        //console.log("Vertex",p,color)
+        var i = newvertices.length
+        newvertices.push(p)
+        if (color) {
+            newfaces.push({ vlist: [i], color: color })
+        }
+        return i;
+    }
+    // Edge linkage transformation
+    var lambdavertices;
+    var thetavertices;
+    var kappa;
+    for (var faceindex = 0; faceindex < faces.length; faceindex++) {
+        var face = faces[faceindex]
+        var vlist = face.vlist
+        if (vlist.length == 2) {
+            var color = face.color
+            var p = vertices[vlist[0]];
+            var q = vertices[vlist[1]];
+            var e = vdiv(vadd(p,q),2)    //edge vector
+            if (lambdavertices === undefined) {
+                var len = vdist(p,q)
+                var A = vdot(q,q)
+                var B = -2*lambda*vdot(p,q)
+                var C = lambda*lambda*vdot(p,p) - len*len
+                // TBD: check on stable quadratic solutions
+                var disc = B*B - 4*A*C
+                console.log("solution to edge link",lambda,disc,A,B,C)
+                if (disc < 0) {
+                    options.lambdainc = -options.lambdainc
+                    options.lambda += options.lambdainc
+                    options.lambda += options.lambdainc
+                    return;
+                }
+                // Either + or - is realizable of course.
+                var theta = (-B + Math.sqrt(disc))/(2*A)
+                var p1 = vmul(p,lambda)
+                var p2 = vmul(p,theta)
+                var q1 = vmul(q,lambda)
+                var q2 = vmul(q,theta)
+                var en = vdiv(vadd(p1,q2),2) // new edge centre
+                var n = vdiv(vsub(p1,q2),len) // normal to bisecting plane
+                kappa = vdot(en,n)/vdot(e,n) // distance to plane
+                console.log("Plane ", n, n.length(), kappa, vdot(en,n), vdot(e,n))
+                //console.log(p,q,len)
+                //console.log(p1,q2,vdist(p1,q2))
+                //console.log(q1,p2,vdist(q1,p2))
+                //showedge(new THREE.Vector3(0,0,0),p);
+                //showedge(new THREE.Vector3(0,0,0),q);
+                //showedge(new THREE.Vector3(0,0,0),e);
+                //console.log(vdot(vsub(pivot,p1),vsub(q2,pivot)))
+                //console.log("Adding vertices", vertices.length)
+                lambdavertices = []
+                thetavertices = []
+                for (var i = 0; i < nvertices; i++) {
+                    var n = addvertex(vmul(vertices[i],lambda),Color.red);
+                    lambdavertices.push(n)
+                    n = addvertex(vmul(vertices[i],theta), Color.green);
+                    thetavertices.push(n)
+                }
+            }
+            var p1 = lambdavertices[vlist[0]]
+            var p2 = thetavertices[vlist[0]]
+            var q1 = lambdavertices[vlist[1]]
+            var q2 = thetavertices[vlist[1]]
+            var pivot = addvertex(vmul(e,kappa),Color.blue)
+            addedge(p1,pivot,Color.cyan);
+            addedge(pivot,q2,Color.cyan);
+            addedge(q1,pivot,Color.yellow);
+            addedge(pivot,p2,Color.yellow);
+        }
+    }
+    // I guess 'this' here is THREE.OFFLoader
+    if (newfaces.length == 0 && !this.alerted) {
+        alert("No edges found for edge linkage");
+        this.alerted = true;
+    }
+    return { vertices: newvertices, faces: newfaces }
+}
+
+PolyContext.prototype.invert = function (off, options) {
+    if (!off) return;
+    // Invert in unit sphere
+    var vdot = THREE.OFFLoader.Utils.vdot
+    for (var i = 0; i < off.vertices.length; i++) {
+        var k = vdot(off.vertices[i],off.vertices[i])
+        off.vertices[i].divideScalar(k)
+    }
+    return off
 }
 
 //eqtest()

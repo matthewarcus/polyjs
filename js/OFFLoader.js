@@ -32,19 +32,14 @@ THREE.OFFLoader = function ( manager ) {
 
 THREE.OFFLoader.prototype = {
     constructor: THREE.OFFLoader,
-    load: function ( url, geometry, options, onLoad, onProgress, onError ) {
+    load: function ( url, onLoad, onProgress, onError ) {
 	var scope = this;
 	var loader = new THREE.XHRLoader( scope.manager );
 	loader.setCrossOrigin( this.crossOrigin );
 	loader.load( url, function ( text, other ) {
             var off = scope.parse(text)
-            if (options.theta != undefined) {
-                off = THREE.OFFLoader.dipolygonid(off)
-                THREE.OFFLoader.twistertransform(off,options.theta)
-            } else if (options.lambda != undefined) {
-                off = THREE.OFFLoader.edgelinkage(off,options.lambda)
-            }
-	    onLoad(THREE.OFFLoader.display(off, geometry, options));
+            console.assert(off)
+	    onLoad(off)
 	}, onProgress, onError );
     },
 
@@ -115,6 +110,11 @@ THREE.OFFLoader.Utils = {
     },
     vdist: function (v0, v1) {
         return v0.distanceTo(v1);
+    },
+    vnormalize: function (v) {
+        var t = v.clone();
+        t.normalize()
+        return t
     },
     interp: function (v0,v1,theta) {
         var v = vmul(v0,theta);
@@ -236,28 +236,28 @@ THREE.OFFLoader.prototype.parse = function ( text, geometry, options ) {
 }
 
 // Copy of Geometry.merge, but updates the geometry in place as far as possible
-THREE.Geometry.prototype.mlaMerge = function ( geometry, matrix, materialIndexOffset ) {
+THREE.Geometry.prototype.offMerge = function ( geometry, matrix, materialIndexOffset ) {
     if ( geometry instanceof THREE.Geometry === false ) {
-	console.error( 'THREE.Geometry.mlaMerge(): geometry not an instance of THREE.Geometry.', geometry );
+	console.error( 'THREE.Geometry.offMerge(): geometry not an instance of THREE.Geometry.', geometry );
 	return;
     }
     var normalMatrix,
 	//vertexOffset = this.vertices.length,
-	vertexOffset = this.mlaVertexOffset,
+	vertexOffset = this.offVertexOffset,
 	vertices1 = this.vertices,
 	vertices2 = geometry.vertices,
 	//faceOffset = this.faces.length,
-	faceOffset = this.mlaFaceOffset,
+	faceOffset = this.offFaceOffset,
 	faces1 = this.faces,
 	faces2 = geometry.faces,
 	//uvOffset = this.faceVertexUvs[ 0 ].length,
-	uvOffset = this.mlaUvOffset,
+	uvOffset = this.offUvOffset,
 	uvs1 = this.faceVertexUvs[ 0 ],
 	uvs2 = geometry.faceVertexUvs[ 0 ];
-    //console.log(this.mlaVertexOffset, vertices1.length, this.mlaFaceOffset, faces1.length)
-    this.mlaVertexOffset += vertices2.length
-    this.mlaFaceOffset += faces2.length
-    this.mlaUvOffset += uvs2.length
+    //console.log(this.offVertexOffset, vertices1.length, this.offFaceOffset, faces1.length)
+    this.offVertexOffset += vertices2.length
+    this.offFaceOffset += faces2.length
+    this.offUvOffset += uvs2.length
     if ( materialIndexOffset === undefined ) materialIndexOffset = 0;
     if ( matrix !== undefined ) {
 	normalMatrix = new THREE.Matrix3().getNormalMatrix( matrix );
@@ -362,36 +362,40 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
     var docut = false;
     
     //var geometry = new THREE.Geometry();
-    geometry.mlaVertexOffset = 0
-    geometry.mlaFaceOffset = 0
-    geometry.mlaUvOffset = 0
+    geometry.offVertexOffset = 0
+    geometry.offFaceOffset = 0
+    geometry.offUvOffset = 0
     var vertices = geometry.vertices;
     var faces = geometry.faces;
     var faceVertexUvs = geometry.faceVertexUvs[0];
-    //faceVertexUvs[0] = [];
     function addface(a, b, c, uva, uvb, uvc, normal, color) {
-        console.assert(geometry.mlaFaceOffset == geometry.mlaUvOffset)
-        if (faces.length <= geometry.mlaFaceOffset) {
+        console.assert(geometry.offFaceOffset == geometry.offUvOffset)
+        if (faces.length <= geometry.offFaceOffset) {
             faces.push(new THREE.Face3)
             faceVertexUvs.push([])
         }
-        var i = geometry.mlaFaceOffset;
-        geometry.mlaFaceOffset++;
-        geometry.mlaUvOffset++;
+        var i = geometry.offFaceOffset;
+        geometry.offFaceOffset++;
+        geometry.offUvOffset++;
 	faces[i].a = a
 	faces[i].b = b
 	faces[i].c = c
-	faces[i].normal = normal
-	if (color) faces[i].color = color
-        faceVertexUvs[i] = [uva,uvb,uvc];
+	faces[i].normal.copy(normal)
+	if (color) {
+            if (!faces[i].color) faces[i].color = []
+            faces[i].color.copy(color)
+        }
+        faceVertexUvs[i][0] = uva
+        faceVertexUvs[i][1] = uvb
+        faceVertexUvs[i][2] = uvc
     }
     function addvertex(vertex) {
-        if (vertices.length <= geometry.mlaVertexOffset) {
+        if (vertices.length <= geometry.offVertexOffset) {
             vertices.push(new THREE.Vector3);
         }
-        var i = geometry.mlaVertexOffset;
+        var i = geometry.offVertexOffset;
         vertices[i].copy(vertex);
-        geometry.mlaVertexOffset++;
+        geometry.offVertexOffset++;
         return i;
     }
     var vertexmodel;
@@ -436,7 +440,7 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
         for (var i = 0; i < vertexmodel.faces.length; i++) {
             vertexmodel.faces[i].color = color || defaultvertexcolor;
         }
-        geometry.mlaMerge(vertexmodel,m);
+        geometry.offMerge(vertexmodel,m);
     }
     var edge = new THREE.Vector3;  // Probably an absurd microptimization
     var midpoint = new THREE.Vector3; // Ditto.
@@ -467,7 +471,7 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
         for (var i = 0; i < edgemodel.faces.length; i++) {
             edgemodel.faces[i].color = color || defaultedgecolor;
         }
-        geometry.mlaMerge(edgemodel,m);
+        geometry.offMerge(edgemodel,m);
     }
     var cut = [];
     var cutlim = -2;
@@ -557,7 +561,7 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
                         geom.faces[i].color = color;
                     }
                 }
-                geometry.mlaMerge(geom);
+                geometry.offMerge(geom);
             }
             if (!nofaces) {
                 var icentroid = addvertex(centroid);
@@ -605,123 +609,19 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
         color = new THREE.Color(0.9,0.5,0.5);
         console.log(cut.length + " cut vertices");
         for (var i = 0; i < cut.length; i+=2) {
-            //addface(icutcentre,cut[i],cut[i+1],color);
-        }
-    }
-    if (0) {
-        faceVertexUvs = []
-        for (var i = 0; i < faces.length ; i++) {
-            faceVertexUvs.push(
-                [new THREE.Vector2(0,0),
-                 new THREE.Vector2(0,1),
-                 new THREE.Vector2(1,1)])
+            addface(icutcentre,cut[i],cut[i+1],color);
         }
     }
     // Trim down in case the geometry has shrunk
-    if (vertices.length > geometry.mlaVertexOffset) vertices.length = geometry.mlaVertexOffset
+    if (vertices.length > geometry.offVertexOffset) vertices.length = geometry.offVertexOffset
     console.assert(faces.length == faceVertexUvs.length)
-    console.assert(geometry.mlaFaceOffset == geometry.mlaUvOffset)
-    if (faces.length > geometry.mlaFaceOffset) {
-        faces.length = geometry.mlaFaceOffset
-        faceVertexUvs.length = geometry.mlaUvOffset
+    console.assert(geometry.offFaceOffset == geometry.offUvOffset)
+    if (faces.length > geometry.offFaceOffset) {
+        faces.length = geometry.offFaceOffset
+        faceVertexUvs.length = geometry.offUvOffset
     }
     if (this.verbose) console.log("Vertices = " + vertices.length + " faces = " + faces.length);
     return geometry;
-}
-
-THREE.OFFLoader.edgelinkage = function (off, lambda) {
-    var vadd = THREE.OFFLoader.Utils.vadd
-    var vsub = THREE.OFFLoader.Utils.vsub
-    var vdiv = THREE.OFFLoader.Utils.vdiv
-    var vmul = THREE.OFFLoader.Utils.vmul
-    var vdot = THREE.OFFLoader.Utils.vdot
-    var vcross = THREE.OFFLoader.Utils.vcross
-    var vdist = THREE.OFFLoader.Utils.vdist
-    var Color = THREE.OFFLoader.Utils.Color
-    var vertices = off.vertices
-    var nvertices = vertices.length
-    var faces = off.faces
-    var newvertices = []
-    var newfaces = []
-    function addedge(p1,p2,color) {
-        //console.log("Face",p1,p2,color)
-        newfaces.push({ vlist: [p1,p2], color: color })
-    }
-    function addvertex(p,color) {
-        //console.log("Vertex",p,color)
-        var i = newvertices.length
-        newvertices.push(p)
-        if (color) {
-            newfaces.push({ vlist: [i], color: color })
-        }
-        return i;
-    }
-    // Edge linkage transformation
-    var lambdavertices;
-    var thetavertices;
-    var kappa;
-    faces.forEach(function(face) {
-        var vlist = face.vlist
-        if (vlist.length == 2) {
-            var color = face.color
-            var p = vertices[vlist[0]];
-            var q = vertices[vlist[1]];
-            var e = vdiv(vadd(p,q),2)    //edge vector
-            if (lambdavertices === undefined) {
-                // Should work out a proper approximation for this
-                if (lambda > 0.9999) lambda = 0.9999
-                if (lambda < -0.9999) lambda = -0.9999
-                var len = vdist(p,q)
-                var A = vdot(q,q)
-                var B = -2*lambda*vdot(p,q)
-                var C = lambda*lambda*vdot(p,p) - len*len
-                // TBD: check on stable quadratic solutions
-                var disc = B*B - 4*A*C
-                console.assert(disc >= 0, "No solution to edge link")
-                // Either + or - is realizable of course.
-                var theta = (-B + Math.sqrt(disc))/(2*A)
-                var p1 = vmul(p,lambda)
-                var p2 = vmul(p,theta)
-                var q1 = vmul(q,lambda)
-                var q2 = vmul(q,theta)
-                var en = vdiv(vadd(p1,q2),2) // new edge centre
-                var n = vdiv(vsub(p1,q2),len) // normal to bisecting plane
-                kappa = vdot(en,n)/vdot(e,n) // distance to plane
-                //console.log("Plane ", n, n.length(), kappa)
-                //console.log(p,q,len)
-                //console.log(p1,q2,vdist(p1,q2))
-                //console.log(q1,p2,vdist(q1,p2))
-                //showedge(new THREE.Vector3(0,0,0),p);
-                //showedge(new THREE.Vector3(0,0,0),q);
-                //showedge(new THREE.Vector3(0,0,0),e);
-                //console.log(vdot(vsub(pivot,p1),vsub(q2,pivot)))
-                //console.log("Adding vertices", vertices.length)
-                lambdavertices = []
-                thetavertices = []
-                for (var i = 0; i < nvertices; i++) {
-                    var n = addvertex(vmul(vertices[i],lambda),Color.red);
-                    lambdavertices.push(n)
-                    n = addvertex(vmul(vertices[i],theta), Color.green);
-                    thetavertices.push(n)
-                }
-            }
-            var p1 = lambdavertices[vlist[0]]
-            var p2 = thetavertices[vlist[0]]
-            var q1 = lambdavertices[vlist[1]]
-            var q2 = thetavertices[vlist[1]]
-            var pivot = addvertex(vmul(e,kappa),Color.blue)
-            addedge(p1,pivot,Color.cyan);
-            addedge(pivot,q2,Color.cyan);
-            addedge(q1,pivot,Color.yellow);
-            addedge(pivot,p2,Color.yellow);
-        }
-    })
-    // I guess 'this' here is THREE.OFFLoader
-    if (newfaces.length == 0 && !this.alerted) {
-        alert("No edges found for edge linkage");
-        this.alerted = true;
-    }
-    return { vertices: newvertices, faces: newfaces }
 }
 
 THREE.OFFLoader.dipolygonid0 = function (off) {
@@ -875,7 +775,7 @@ THREE.OFFLoader.dipolygonid = function (off) {
 // each face enough to make the "secondary" faces have the same
 // edge width. Sometimes there isn't a solution. For three faces
 // occasionally it works, but usually a face is distorted.
-THREE.OFFLoader.twistertransform = function (off, theta) {
+THREE.OFFLoader.twistertransform = function (off, options) {
     var vadd = THREE.OFFLoader.Utils.vadd
     var vsub = THREE.OFFLoader.Utils.vsub
     var vdiv = THREE.OFFLoader.Utils.vdiv
@@ -887,6 +787,8 @@ THREE.OFFLoader.twistertransform = function (off, theta) {
     var faces = off.faces
     var m = new THREE.Matrix4;
     var face1; // First type 1 face, use this as model
+    var theta = options.theta || 0
+    options.theta = theta + 0.01 //Increment for next step
     faces.forEach(function(face) {
         var vlist = face.vlist
         if (vlist.length >= 3) {
