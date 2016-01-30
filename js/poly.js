@@ -364,6 +364,7 @@ PolyContext.prototype.handleKey = function(key) {
         break;
     case 'h':
         this.dohemi = !this.dohemi;
+        context.needclone = true;
         break;
     case 's':
         this.dosnubify = !this.dosnubify;
@@ -557,15 +558,6 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
         var vaxis = Vector.normalize(Vector.cross(centre,uaxis)); // centre is normal
         if (parity) vaxis = Vector.negate(vaxis); // Mirror image
 
-        // Compute uvs for face points
-        var uvs = [];
-        for (var i = 0; i < plist.length; i++) {
-            var u = 0.5 + Vector.dot(Vector.sub(plist[i],centre),uaxis);
-            var v = 0.5 + Vector.dot(Vector.sub(plist[i],centre),vaxis);
-            uvs.push(new THREE.Vector2(u,v));
-        }
-        var uvcentre = new THREE.Vector2(0.5,0.5);
-
         if (this.dohemi) {
             // Do this first as might modify plist
             // TBD: Proper texture coordinates!
@@ -581,6 +573,15 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
                 }
             }
         }
+
+        // Compute uvs for face points
+        var uvs = []; // Try not to clash with hemi uvs
+        for (var i = 0; i < plist.length; i++) {
+            var u = 0.5 + Vector.dot(Vector.sub(plist[i],centre),uaxis);
+            var v = 0.5 + Vector.dot(Vector.sub(plist[i],centre),vaxis);
+            uvs.push(new THREE.Vector2(u,v));
+        }
+        var uvcentre = new THREE.Vector2(0.5,0.5);
 
         if (plist.length == 3) {
             // Should do this when some edges are degenerate too.
@@ -640,6 +641,7 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
                     this.doretroflex = false;
                 }
             }
+            console.assert(uvs.length == plist.length)
             for (var i = 0; i < plist.length; i++) {
                 var p1 = plist[i];
                 var p2 = plist[(i+1)%plist.length];
