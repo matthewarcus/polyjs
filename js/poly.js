@@ -91,7 +91,7 @@
 // Our state object.
 function PolyContext(options) {
     // Options, modifiable during runtime
-    this.verbose = true
+    this.verbose = false
     this.dostellate = false;
     this.dosnubify = false;
     this.drawtype = 0;
