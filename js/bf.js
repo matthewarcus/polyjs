@@ -437,7 +437,7 @@ PolyContext.prototype.hoberman = function(off,options) {
                 var C = lambda*lambda*vdot(p,p) - len*len
                 // TBD: check on stable quadratic solutions
                 var disc = B*B - 4*A*C
-                console.log("solution to edge link",lambda,disc,A,B,C)
+                //console.log("solution to edge link",lambda,disc,A,B,C)
                 if (disc < 0) {
                     options.lambdainc = -options.lambdainc
                     options.lambda += options.lambdainc
@@ -453,7 +453,7 @@ PolyContext.prototype.hoberman = function(off,options) {
                 var en = vdiv(vadd(p1,q2),2) // new edge centre
                 var n = vdiv(vsub(p1,q2),len) // normal to bisecting plane
                 kappa = vdot(en,n)/vdot(e,n) // distance to plane
-                console.log("Plane ", n, n.length(), kappa, vdot(en,n), vdot(e,n))
+                //console.log("Plane ", n, n.length(), kappa, vdot(en,n), vdot(e,n))
                 //console.log(p,q,len)
                 //console.log(p1,q2,vdist(p1,q2))
                 //console.log(q1,p2,vdist(q1,p2))
