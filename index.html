@@ -154,7 +154,7 @@ THE SOFTWARE.
       <li><a href="poly.html?off=off/N8-T1s.off&allvertices&alledges&texture=images/202.jpg&vertexwidth=0.03&edgewidth=0.015&rotate&vertexstyle=cylinder">Octa-Sphericon Dual</a> (see <a href="http://www.interocitors.com/polyhedra/n_icons/EvenOrderSideCut/index.html">here</a>)</li>
       <li><a href="poly.html?off=off/Icosagyrexcavated_Icosahedron.off&z=2&rotate&nofaces&vertexwidth=0.02&edgewidth=0.01">Icosagyrexcavated Icosahedron</a> (see <a href="http://www.interocitors.com/polyhedra/Deltahedra/Cundy/Coptic/">here</a>)</li>
     </ul>
-    <h3>Linkages & Other Configurations</h3>
+    <h3>Linkages & Dipolygonids</h3>
     For a polyhedron with all edge lengths equal, we can replace each
     edge with a hinged pair of brackets that allows the polyhedron to
     be collapsed like an umbrella (the angle of the bracket is chosen
@@ -188,18 +188,32 @@ THE SOFTWARE.
       <!-- <li><a href="poly.html?off=off/u58.off&function=dipolygonid&alledges&allvertices&rotate&run">U58</a> -->
       <!-- <li><a href="poly.html?off=off/u66.off&function=dipolygonid&alledges&allvertices&rotate&run">U58</a> -->
     </ul>
-    Some other configurations:
+    <h3>Miscellaneous</h3>
     <ul>
-      <li><a href="poly.html?function=loadbf&z=6&rotate&run">Another
-          Jitterbug rendition</a> This one constructed from the basic geometry.
+      <li><a href="poly.html?function=zonohedron&off=off/icosid.off&off.k=1&z=1000&rotate">A
+      zonohedron</a> A vast and fascinating area of polyhedra
+      studies. Here we see the zonohedrification of the
+      zonohedifrication of an icosidodecahedron (using the vertex
+      vectors for the zonohedrification). The algorithm is
+      from <a href="http://www.georgehart.com/zonohedra/zonohedrification.html">George
+      Hart</a>. Faces are coloured according to surface area (I think an idea
+        due
+      to <a href="http://www.northforktrails.com/RussellTowle/Zonohedra/zonohedra.html">Russell
+      Towle</a> originally).
+      <li><a href="poly.html?function=zonohedron&off.n=3&off.k=3&z=300&rotate">
+      A star zonohedron</a> A 3-vector star, triple-zonohedrified.
+        <li><a href="poly.html?function=zonohedron&off.n=50&z=80&sym=2:3:3&compound&rotate">
+        Tetrahedral compound of 50-star polar zonohedron</a>
       <li><a href="poly.html?function=polygon&off.n=6&off.m=1&run">Semiregular
-          polygons</a> I wanted to test algorithms for drawing retroflex
-        edges, but this is quite fun in its own right. Not sure if
+        polygons</a> A test for drawing retroflex edges, but quite
+        fun in its own right. Not sure if 
         there is a standard meaning of "semiregular" for polygons - here we mean
         alternate edges and angles are the same, with vertices at
         2imπ/n ± θ, for 0 <= i < n, with θ varying.
       <li><a href="poly.html?function=polygon&off.n=17&off.m=7&run">17/7
       polygon</a> - construct that!
+      <li><a href="poly.html?function=loadbf&z=6&rotate&run">Another
+          Jitterbug rendition</a> This one constructed from the basic geometry.
       <li><a href="poly.html?function=theorem&run">A nice Euclidean
       theorem</a>: joins of opposite edge bisectors in a tetrahedron
       are coincident. The yellow vertices clearly form a parallelogram.
@@ -302,5 +316,7 @@ THE SOFTWARE.
       <li>24/1/15: Better tours
       <li>24/1/15: Zonohedra beta
       <li>27/1/15: Bugfix: draw retroflex edges properly
+      <li>30/1/15: Tidied up interfaces to off functions
+      <li>31/1/15: Added zonohedron example
 </body> 
 </html>

@@ -460,7 +460,7 @@ PolyContext.prototype.handleKey = function(key) {
     default:
         handled = false;
     }
-    context.update(update);
+    if (handled) context.update(update);
     return handled;
 }
 
@@ -922,7 +922,7 @@ function offload(file, context) {
     var loader = new THREE.OFFLoader( manager );
     loader.load( file,
                  function (off) {
-                     context.off = off
+                     context.offdata = off
                      context.update(PolyContext.UpdateModel);
                  },
                  onProgress, onError);
@@ -1057,8 +1057,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
         //console.log(context.camera.position);
     }
 
-    this.offcompound = function() {
-        var off = context.off;
+    this.offcompound = function(off) {
         var offgeom = context.offgeom;
         var offcolors = context.offcolors;
         var geometry = new THREE.Geometry;
@@ -1292,7 +1291,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                    1000 / 25 );
         if (needupdate == PolyContext.UpdateModel) {
             if (context.offfile || context.fname) {
-                var off = context.off
+                var off = context.offdata
                 var options = context.offoptions
                 // Maybe this should take a sequence of functions
                 if (context.fname) {
@@ -1309,7 +1308,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                         context.offcolors.push(c);
                     }
                     if (context.docompound) {
-                        context.offcompound();
+                        context.offcompound(off);
                         if (context.verbose) console.log("Compound of", context.compound);
                     } else if (context.needclone) {
                         context.needclone = false

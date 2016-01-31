@@ -263,21 +263,44 @@ PolyContext.prototype.theorem = function(off,options) {
 }
 
 PolyContext.prototype.zonohedron = function(off,options) {
-    var N = options.n || 3
-    var M = options.m || 1
+    var vcross = THREE.OFFLoader.Utils.vcross
+    var star
+    if (off) {
+        //console.log("Making star from poly")
+        star = []
+        // Make a star from the vertices in off
+        off.vertices.forEach(function (v) {
+            // This linear scan doesn't really cut the mustard
+            // but will do for now.
+            for (var i = 0; i < star.length; i++) {
+                if (vcross(star[i],v).length() < 1e-5) {
+                    return
+                }
+            }
+            star.push(v);
+        })
+    } else {
+        var N = options.n || 3
+        var M = options.m || 1
+        var scale = 1;
+        if (options.theta != undefined) {
+            console.log(options.theta)
+            scale = 2*Math.sin(options.theta);
+            options.theta += 0.01;
+        }
+        star = THREE.OFFLoader.makeStar(N,M,scale)
+    }
     var k = options.k || 0
     var off = { vertices: [], faces: [] }
-    var scale = 1;
-    if (options.theta != undefined) scale = Math.sin(options.theta);
-    var star = THREE.OFFLoader.makeStar(N,M,scale)
     var newstar = []
     for (var i = 0; i < k; i++) {
-        star.forEach(function(v) { v.normalize(); })
         THREE.OFFLoader.starZonohedron(star,null,newstar)
+        console.log(star.length)
         star = newstar; newstar = []
     }
-    THREE.OFFLoader.starZonohedron(star,off)
-    return off;
+    off = THREE.OFFLoader.starZonohedron(star,off)
+    //console.log(off)
+    return off
 }
 
 // Draw a semi-regular polygon.

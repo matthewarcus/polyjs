@@ -151,7 +151,7 @@ THREE.OFFLoader.Utils = {
         magenta:new THREE.Color(1,0,1),
         orange: new THREE.Color(1,0.5,0),
         raspberry: new THREE.Color(1,0,0.5),
-        purple: new THREE.Color(1,0.5,1),
+        purple: new THREE.Color(0.5,0.1,0.5),
     }
 }
 
@@ -347,6 +347,7 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
     var vdot = THREE.OFFLoader.Utils.vdot
     var vcross = THREE.OFFLoader.Utils.vcross
     var makenormal = THREE.OFFLoader.Utils.makenormal
+    var Color = THREE.OFFLoader.Utils.Color
 
     // Options
     var vertexstyle = options.vertexstyle;
@@ -494,6 +495,13 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
         var n = off.faces[faceindex].vlist.length
         var vlist = off.faces[faceindex].vlist
         var color = off.faces[faceindex].color
+        var colors = [Color.red, Color.yellow, Color.blue,
+                      Color.green, Color.purple, Color.orange,
+                      Color.cyan, Color.magenta, Color.white ]
+        if (!color && off.faces[faceindex].type != undefined) {
+            //console.log("facetype",off.faces[faceindex].type)
+            color = colors[off.faces[faceindex].type%colors.length]
+        }
         for (var i = 0; i < vlist.length; i++) {
             console.assert(vlist[i] < vertices.length,
                            "Vertex index out of range");
@@ -613,15 +621,18 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
         }
     }
     // Trim down in case the geometry has shrunk
-    if (vertices.length > geometry.offVertexOffset) vertices.length = geometry.offVertexOffset
+    if (vertices.length > geometry.offVertexOffset) {
+        vertices.length = geometry.offVertexOffset;
+    }
     console.assert(faces.length == faceVertexUvs.length)
     console.assert(geometry.offFaceOffset == geometry.offUvOffset)
     if (faces.length > geometry.offFaceOffset) {
-        faces.length = geometry.offFaceOffset
-        faceVertexUvs.length = geometry.offUvOffset
+        faces.length = geometry.offFaceOffset;
+        faceVertexUvs.length = geometry.offUvOffset;
     }
-    if (this.verbose) console.log("Vertices = " + vertices.length + " faces = " + faces.length);
-    return geometry;
+    if (this.verbose) {
+        console.log("Vertices = " + vertices.length + " faces = " + faces.length);
+    }
 }
 
 THREE.OFFLoader.dipolygonid0 = function (off) {
@@ -925,6 +936,11 @@ THREE.OFFLoader.starZonohedron = function(star,off,newstar) {
         //console.log("Adding",p)
         newstar.push(p);
     }
+    var vertices, faces
+    if (off) {
+        vertices = off.vertices
+        faces = off.faces
+    }
     function addvertex(p) {
         for (var i = 0; i < off.vertices.length; i++) {
             if (off.vertices[i].distanceTo(p) < 1e-4) {
@@ -935,13 +951,43 @@ THREE.OFFLoader.starZonohedron = function(star,off,newstar) {
         off.vertices.push(p)
         return i;
     }
-    function addface(fvs) {
+    var facetypes = []
+    function getfacetype(vlist,centre) {
+        //console.log(vlist)
+        var sig = 0;
+        // Add the areas of the segments of the face
+        // Use Heron's formula
+        // Since face is centrally symmetric, only
+        // need to do half the edges
+        // Could just calculate distance to each point once
+        console.assert(vlist.length%2 == 0)
+        for (var i = 0; i < vlist.length/2; i++) {
+            var p0 = vlist[(i+0)%vlist.length]
+            var p1 = vlist[(i+1)%vlist.length]
+            //console.log(centre,p0,p1)
+            var a = centre.distanceTo(p0)
+            var b = centre.distanceTo(p1)
+            var c = p0.distanceTo(p1);
+            //console.log(a,b,c)
+            var s = (a+b+c)/2;
+            var area = Math.sqrt(s*(s-a)*(s-b)*(s-c))
+            sig += area
+        }
+        for (var i = 0; i < facetypes.length; i++) {
+            if (Math.abs(facetypes[i]-sig) < 1e-5) {
+                return i;
+            }
+        }
+        facetypes.push(sig)
+        return facetypes.length-1
+    }
+    function addface(fvs, facetype) {
         console.assert(off)
         var vlist = []
         for (var i = 0; i < fvs.length;i++) {
             vlist.push(addvertex(fvs[i]))
         }
-        off.faces.push({ vlist:vlist })
+        off.faces.push({ vlist:vlist, type: facetype })
     }
     // Each component is an N-vector of {-1,0,1}
     for (var sj = 1; sj < N; sj++) {
@@ -1033,16 +1079,19 @@ THREE.OFFLoader.starZonohedron = function(star,off,newstar) {
                             fvs[i].angle = Math.atan2(vdot(fv,yaxis),vdot(fv,xaxis))
                         }
                         fvs.sort(function(v0,v1) { return v0.angle < v1.angle; })
-                        addface(fvs);
+                        var facetype = getfacetype(fvs,centre)
+                        addface(fvs, facetype);
                         // Opposite face - need to reverse vertex ordering to
                         // keep correct orientation
-                        addface(fvs.map(vnegate).reverse())
+                        addface(fvs.map(vnegate).reverse(), facetype)
                     }
                 }
             }
         }
     }
-    if (off) {
+    if (off && false) {
+        console.log("Facetypes:", facetypes)
         console.log("StarZono:", off.faces.length, off.vertices.length);
     }
+    return off
 }
