@@ -111,6 +111,12 @@ THREE.OFFLoader.Utils = {
     vdist: function (v0, v1) {
         return v0.distanceTo(v1);
     },
+    vtaxi: function (v0, v1) {
+        return Math.abs(v0.x-v1.x) + Math.abs(v0.y-v1.y) + Math.abs(v0.z-v1.z)
+    },
+    vntaxi: function (v0, v1) {
+        return Math.abs(v0.x+v1.x) + Math.abs(v0.y+v1.y) + Math.abs(v0.z+v1.z)
+    },
     vnormalize: function (v) {
         var t = v.clone();
         t.normalize()
@@ -913,6 +919,8 @@ THREE.OFFLoader.starZonohedron = function(star,off,newstar) {
     var vmul = THREE.OFFLoader.Utils.vmul
     var vdot = THREE.OFFLoader.Utils.vdot
     var vcross = THREE.OFFLoader.Utils.vcross
+    var vtaxi = THREE.OFFLoader.Utils.vtaxi
+    var vntaxi = THREE.OFFLoader.Utils.vntaxi
     var vnegate = THREE.OFFLoader.Utils.vnegate
     var vector = THREE.OFFLoader.Utils.vector
     var N = star.length;
@@ -926,14 +934,18 @@ THREE.OFFLoader.starZonohedron = function(star,off,newstar) {
     }
     function addvector(p) {
         console.assert(newstar)
-        // This linear scan doesn't really cut the mustard
-        // but will do for now.
+        // This linear scan will do for now.
+        for (var i = 0; i < newstar.length; i++) {
+            // Cheap test catches most duplicates
+            if (vtaxi(newstar[i],p) < 1e-5 || vntaxi(newstar[i],p) < 1e-5) {
+                return;
+            }
+        }
         for (var i = 0; i < newstar.length; i++) {
             if (vcross(newstar[i],p).length() < 1e-5) {
                 return;
             }
         }
-        //console.log("Adding",p)
         newstar.push(p);
     }
     var vertices, faces
@@ -1013,83 +1025,58 @@ THREE.OFFLoader.starZonohedron = function(star,off,newstar) {
             console.assert(K >= 2);
             if (edges[0] == si) { // Need to ensure uniqueness
                 var npoints = 2*K;
-                var p = []
                 var centre = apply(star,face); // Also the face normal
-                if (K == 2 && false) {
-                    // easy case
-                    //p[0] = centre - star[edges[0]] - star[edges[1]];
-                    //p[1] = centre - star[edges[0]] + star[edges[1]];
-                    p[0] = vsub(centre,vadd(star[edges[0]],star[edges[1]]));
-                    p[1] = vsub(centre,vsub(star[edges[0]],star[edges[1]]));
-                    p[2] = vadd(centre,vadd(star[edges[0]],star[edges[1]]));
-                    p[3] = vadd(centre,vsub(star[edges[0]],star[edges[1]]));
-                    //p[3] = centre + star[edges[0]] - star[edges[1]];
-                    if (newstar) {
-                        for (var j = 0; j < 4; j++) {
-                            //if (p[j].y > obj.maxy) obj.maxy = p[j].y;
-                            addvector(p[j]);
+                var p = []
+                for (var i = 0; i < K; i++) {
+                    p.push(vcross(star[edges[i]], centre));
+                }
+                var fvs = []
+                for (var i = 0; i < K; i++) {
+                    var eps = 1e-4;
+                    var pvec = vector();
+                    for (var j = 0; j < K; j++) {
+                        var t = vdot(p[j],star[edges[i]]);
+                        if (t > eps) {
+                            pvec.add(star[edges[j]]);
+                        } else {
+                            pvec.sub(star[edges[j]]);
                         }
                     }
-                    if (off) {
-                        for (var i = 0; i < npoints; i++) {
-                            var p0 = p[i];
-                            var p1 = p[(i+1)%npoints];
-                            addtriangle(centre, p0, p1);
-                            addtriangle(vnegate(centre), vnegate(p1), vnegate(p0));
-                        }
+                    // We could save a little work here by just adding
+                    // one point, but this will do for now.
+                    var p0 = vadd(centre,pvec);
+                    var p1 = vsub(centre,pvec);
+                    fvs.push(p0);
+                    fvs.push(p1);
+                }
+                if (newstar) {
+                    for (var i = 0; i < fvs.length; i++) {
+                        addvector(fvs[i]);
                     }
-                } else {
-                    p = [];
-                    var fvs = []
-                    for (var i = 0; i < K; i++) {
-                        p.push(vcross(star[edges[i]], centre));
+                }
+                if (off) {
+                    // Need to sort the face vertices so they
+                    // are in the right order.
+                    var xaxis = vsub(fvs[0],centre);
+                    var yaxis = vcross(centre,xaxis);
+                    xaxis.normalize();
+                    yaxis.normalize();
+                    for (var i = 0; i < fvs.length; i++) {
+                        // Nice JS trick - I can add an ad-hoc "angle" field in
+                        // to the vectors in fvs & use that as a sorting key
+                        var fv = vsub(fvs[i],centre)
+                        fvs[i].angle = Math.atan2(vdot(fv,yaxis),vdot(fv,xaxis))
                     }
-                    for (var i = 0; i < K; i++) {
-                        var eps = 1e-4;
-                        var pvec = vector();
-                        for (var j = 0; j < K; j++) {
-                            var t = vdot(p[j],star[edges[i]]);
-                            if (t > eps) {
-                                pvec.add(star[edges[j]]);
-                            } else {
-                                pvec.sub(star[edges[j]]);
-                            }
-                        }
-                        // We could save a little work here by just adding
-                        // one point, but this will do for now.
-                        var p0 = vadd(centre,pvec);
-                        var p1 = vsub(centre,pvec);
-                        fvs.push(p0);
-                        fvs.push(p1);
-                    }
-                    if (newstar) {
-                        for (var i = 0; i < fvs.length; i++) {
-                            addvector(fvs[i]);
-                        }
-                    }
-                    if (off) {
-                        // Need to sort the face vertices so they
-                        // are in the right order.
-                        var xaxis = vsub(fvs[0],centre);
-                        var yaxis = vcross(xaxis,centre);
-                        xaxis.normalize();
-                        yaxis.normalize();
-                        for (var i = 0; i < fvs.length; i++) {
-                            // Nice JS trick - I can add an ad-hoc "angle" field in
-                            // to the vectors in fvs & use that as a sorting key
-                            var fv = vsub(fvs[i],centre)
-                            fvs[i].angle = Math.atan2(vdot(fv,yaxis),vdot(fv,xaxis))
-                        }
-                        fvs.sort(function(v0,v1) { return v0.angle < v1.angle; })
-                        for (var i = 0; i < fvs.length; i++) {
-                            delete fvs[i].angle;
-                        }
-                        var facetype = getfacetype(fvs,centre)
-                        addface(fvs, facetype);
-                        // Opposite face - need to reverse vertex ordering to
-                        // keep correct orientation
-                        addface(fvs.map(vnegate).reverse(), facetype)
-                    }
+                    fvs = fvs.sort(function(v0,v1) {
+                        if (v0.angle < v1.angle) return -1;
+                        else if (v0.angle > v1.angle) return 1;
+                        else return 0;
+                    })
+                    var facetype = getfacetype(fvs,centre)
+                    addface(fvs, facetype);
+                    // Opposite face - need to reverse vertex ordering to
+                    // keep correct orientation
+                    addface(fvs.map(vnegate).reverse(), facetype)
                 }
             }
         }

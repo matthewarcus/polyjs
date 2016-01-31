@@ -923,6 +923,7 @@ function offload(file, context) {
     loader.load( file,
                  function (off) {
                      context.offdata = off
+                     context.needclone = true
                      context.update(PolyContext.UpdateModel);
                  },
                  onProgress, onError);
@@ -1144,8 +1145,8 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
     }
     this.updatecolors = function() {
         var geometry = mesh.geometry
-        if (context.offfile) {
-            var ncolors = context.offcolors.length // Bleughh!
+        if (context.offcolors) {
+            var ncolors = context.offcolors.length;
             // Bzzt! Repetition!
             for (var i = 0; i < geometry.faces.length; i++) {
                 if (context.colorstyle === 0) {
@@ -1163,7 +1164,6 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
 
     if (this.offfile) {
         // Load the offfile into the main geometry object
-        context.needclone = true
         offload(this.offfile, context);
     }
 

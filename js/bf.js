@@ -263,25 +263,33 @@ PolyContext.prototype.theorem = function(off,options) {
 }
 
 PolyContext.prototype.zonohedron = function(off,options) {
-    var vcross = THREE.OFFLoader.Utils.vcross
-    var star
+    var vcross = THREE.OFFLoader.Utils.vcross;
+    var vtaxi = THREE.OFFLoader.Utils.vtaxi;
+    var vntaxi = THREE.OFFLoader.Utils.vntaxi;
+    var star;
     if (off) {
         //console.log("Making star from poly")
-        star = []
+        star = [];
         // Make a star from the vertices in off
         off.vertices.forEach(function (v) {
-            // This linear scan doesn't really cut the mustard
-            // but will do for now.
+            // This linear scan will do for now.
+            // Check for equality first
+            for (var i = 0; i < star.length; i++) {
+                if (vtaxi(star[i],v) < 1e-5 || vntaxi(star[i],v) < 1e-5) {
+                    return;
+                }
+            }
+            // Then for collinearity
             for (var i = 0; i < star.length; i++) {
                 if (vcross(star[i],v).length() < 1e-5) {
-                    return
+                    return;
                 }
             }
             star.push(v);
         })
     } else {
-        var N = options.n || 3
-        var M = options.m || 1
+        var N = options.n || 3;
+        var M = options.m || 1;
         var scale = 1;
         if (options.theta != undefined) {
             console.log(options.theta)
@@ -291,14 +299,21 @@ PolyContext.prototype.zonohedron = function(off,options) {
         star = THREE.OFFLoader.makeStar(N,M,scale)
     }
     var k = options.k || 0
-    var off = { vertices: [], faces: [] }
     var newstar = []
     for (var i = 0; i < k; i++) {
         THREE.OFFLoader.starZonohedron(star,null,newstar)
         star = newstar; newstar = []
     }
+    var off = { vertices: [], faces: [] }
     off = THREE.OFFLoader.starZonohedron(star,off)
-    //console.log(off)
+    if (0) {
+        for (var i = 0; i < off.vertices.length; i++) {
+            console.log(off.vertices[i])
+        }
+        for (var i = 0; i < off.faces.length; i++) {
+            console.log(off.faces[i].vlist)
+        }
+    }
     return off
 }
 
