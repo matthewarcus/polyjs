@@ -295,7 +295,6 @@ PolyContext.prototype.zonohedron = function(off,options) {
     var newstar = []
     for (var i = 0; i < k; i++) {
         THREE.OFFLoader.starZonohedron(star,null,newstar)
-        console.log(star.length)
         star = newstar; newstar = []
     }
     off = THREE.OFFLoader.starZonohedron(star,off)
