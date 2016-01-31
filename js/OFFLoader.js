@@ -942,9 +942,11 @@ THREE.OFFLoader.starZonohedron = function(star,off,newstar) {
         faces = off.faces
     }
     function addvertex(p) {
-        for (var i = 0; i < off.vertices.length; i++) {
-            if (off.vertices[i].distanceTo(p) < 1e-4) {
-                return i;
+        if (0) {
+            for (var i = 0; i < off.vertices.length; i++) {
+                if (off.vertices[i].distanceTo(p) < 1e-4) {
+                    return i;
+                }
             }
         }
         i = off.vertices.length;
