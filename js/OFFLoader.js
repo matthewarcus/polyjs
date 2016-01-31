@@ -1081,6 +1081,9 @@ THREE.OFFLoader.starZonohedron = function(star,off,newstar) {
                             fvs[i].angle = Math.atan2(vdot(fv,yaxis),vdot(fv,xaxis))
                         }
                         fvs.sort(function(v0,v1) { return v0.angle < v1.angle; })
+                        for (var i = 0; i < fvs.length; i++) {
+                            delete fvs[i].angle;
+                        }
                         var facetype = getfacetype(fvs,centre)
                         addface(fvs, facetype);
                         // Opposite face - need to reverse vertex ordering to
