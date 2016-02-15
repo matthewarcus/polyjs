@@ -161,11 +161,10 @@ THREE.OFFLoader.Utils = {
     }
 }
 
-
 THREE.OFFLoader.prototype.parse = function ( text, geometry, options ) {
     // Remove all occurences of a from s
     function remove(a,s) {
-        while(true) {
+        while (true) {
             var i = s.indexOf(a);
             if (i < 0) break;
             s.splice(i,1);
@@ -173,8 +172,7 @@ THREE.OFFLoader.prototype.parse = function ( text, geometry, options ) {
         return s;
     }
     if (this.verbose) console.time( 'OFFLoader' );
-    var vertices = [];
-    var faces = [];
+    var vertices = [], faces = [];
     var state = 0, count = 0, nvertices = 0, nfaces = 0;
 
     var lines = text.split( '\n' );
@@ -219,21 +217,26 @@ THREE.OFFLoader.prototype.parse = function ( text, geometry, options ) {
         } else if (state == 3) {
             if (nfaces > 0) {
                 nfaces--;
-                var color;
                 var n = parseInt(items[0]);
+                var face = {}
                 // Color can also just be an index
-                if (items.length == n+4) {
+                if (items.length == n+2) {
+                    var type = parseInt(items[n+1]);
+                    face.type = type;
+                } else if (items.length == n+4) {
                     // Reuse color objects?
-                    color = new THREE.Color(parseFloat(items[n+1]),
-                                            parseFloat(items[n+2]),
-                                            parseFloat(items[n+3]));
+                    var color = new THREE.Color(parseFloat(items[n+1]),
+                                                parseFloat(items[n+2]),
+                                                parseFloat(items[n+3]));
+                    face.color = color;
                 }
                 var vlist = [];
                 for (var i = 0; i < n; i++) {
                     var v = parseInt(items[i+1]);
                     vlist.push(v);
                 }
-                faces.push({ vlist: vlist, color: color });
+                face.vlist = vlist;
+                faces.push(face);
             }
         }
     }
@@ -248,19 +251,15 @@ THREE.Geometry.prototype.offMerge = function ( geometry, matrix, materialIndexOf
 	return;
     }
     var normalMatrix,
-	//vertexOffset = this.vertices.length,
 	vertexOffset = this.offVertexOffset,
 	vertices1 = this.vertices,
 	vertices2 = geometry.vertices,
-	//faceOffset = this.faces.length,
 	faceOffset = this.offFaceOffset,
 	faces1 = this.faces,
 	faces2 = geometry.faces,
-	//uvOffset = this.faceVertexUvs[ 0 ].length,
 	uvOffset = this.offUvOffset,
 	uvs1 = this.faceVertexUvs[ 0 ],
 	uvs2 = geometry.faceVertexUvs[ 0 ];
-    //console.log(this.offVertexOffset, vertices1.length, this.offFaceOffset, faces1.length)
     this.offVertexOffset += vertices2.length
     this.offFaceOffset += faces2.length
     this.offUvOffset += uvs2.length
@@ -354,6 +353,9 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
     var vcross = THREE.OFFLoader.Utils.vcross
     var makenormal = THREE.OFFLoader.Utils.makenormal
     var Color = THREE.OFFLoader.Utils.Color
+    var colors = [ Color.red, Color.yellow, Color.blue,
+                   Color.green, Color.purple, Color.orange,
+                   Color.cyan, Color.magenta, Color.white ]
 
     // Options
     var vertexstyle = options.vertexstyle;
@@ -368,7 +370,6 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
     var reversefaces = options.reversefaces;
     var docut = false;
     
-    //var geometry = new THREE.Geometry();
     geometry.offVertexOffset = 0
     geometry.offFaceOffset = 0
     geometry.offUvOffset = 0
@@ -407,14 +408,13 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
     }
     var vertexmodel;
     var edgemodel;
-    var defaultvertexcolor = new THREE.Color(0.9,0.9,0.9);
-    var defaultedgecolor = defaultvertexcolor;
+    var defaultvertexcolor = new THREE.Color(0.6,0.6,0.6);
+    var defaultedgecolor = new THREE.Color(0.9,0.9,0.9);
     var m = new THREE.Matrix4;
     var tt = new THREE.Matrix4;
     var yaxis = new THREE.Vector3(0,1,0);
     var xaxis = new THREE.Vector3(1,0,0);
     function showvertex(v0, color) {
-        //console.log(v0,color)
         if (!vertexmodel) {
             if (vertexstyle === "cylinder") {
                 vertexmodel = new THREE.CylinderGeometry( vertexwidth, vertexwidth, vertexwidth );
@@ -501,9 +501,6 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
         var n = off.faces[faceindex].vlist.length
         var vlist = off.faces[faceindex].vlist
         var color = off.faces[faceindex].color
-        var colors = [Color.red, Color.yellow, Color.blue,
-                      Color.green, Color.purple, Color.orange,
-                      Color.cyan, Color.magenta, Color.white ]
         if (!color && off.faces[faceindex].type != undefined) {
             //console.log("facetype",off.faces[faceindex].type)
             color = colors[off.faces[faceindex].type%colors.length]
@@ -519,9 +516,9 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
             }
         } else if (n == 2) {
             if (!noedges) {
-                var p = vertices[vlist[0]];
-                var q = vertices[vlist[1]];
-                showedge(p,q,color);
+                var v0 = vertices[vlist[0]];
+                var v1 = vertices[vlist[1]];
+                showedge(v0,v1,color);
             }
         } else {
             if (docut) {
@@ -639,53 +636,6 @@ THREE.OFFLoader.display = function ( off, geometry, options ) {
     if (this.verbose) {
         console.log("Vertices = " + vertices.length + " faces = " + faces.length);
     }
-}
-
-THREE.OFFLoader.dipolygonid0 = function (off) {
-    var vadd = THREE.OFFLoader.Utils.vadd
-    var vsub = THREE.OFFLoader.Utils.vsub
-    var vdiv = THREE.OFFLoader.Utils.vdiv
-    var vmul = THREE.OFFLoader.Utils.vmul
-    var vdot = THREE.OFFLoader.Utils.vdot
-    var vcross = THREE.OFFLoader.Utils.vcross
-    var Color = THREE.OFFLoader.Utils.Color
-    var vertices = off.vertices
-    var faces = off.faces
-    var newvertices = []
-    var newfaces = []
-    var edges = new Map()
-    faces.forEach(function(face,findex) {
-        var vlist = face.vlist
-        var newvlist = []
-        vlist.forEach(function(v1,i) {
-            var v2 = vlist[(i+1)%vlist.length]
-            console.assert(v2 != undefined)
-            //console.log("Setting",v1,v2)
-            edges.set(v1*1000+v2, { face: findex, index: i })
-            newvlist.push(newvertices.length)
-            newvertices.push(vertices[v1].clone())
-        })
-        newfaces.push({ vlist: newvlist, color: Color.red, type: 0 })
-    })
-    faces.forEach(function(face,findex) {
-        var vlist = face.vlist
-        var newvlist = []
-        vlist.forEach(function(v1,i) {
-            var v2 = vlist[(i+1)%vlist.length]
-            console.assert(v2 != undefined)
-            var e = edges.get(v2*1000+v1) // Other face for edge
-            //console.log("Getting",v2,v1,e)
-            console.assert(e)
-            var f2 = e.face
-            var i2 = e.index
-            var v3 = newfaces[f2].vlist[i2]
-            console.assert(v3 != undefined)
-            newvlist.push(v3)
-        })
-        newfaces.push({ vlist: newvlist, color: Color.green, type: 1 })
-    })
-    //console.log(newvertices.length, newfaces.length)
-    return { vertices: newvertices, faces: newfaces }
 }
 
 // Take an ordinary OFF model, with up to 3 set of proper faces,
@@ -1068,6 +1018,7 @@ THREE.OFFLoader.starZonohedron = function(star,off,newstar) {
                         fvs[i].angle = Math.atan2(vdot(fv,yaxis),vdot(fv,xaxis))
                     }
                     fvs = fvs.sort(function(v0,v1) {
+                        // NB: Not just returning a boolean.
                         if (v0.angle < v1.angle) return -1;
                         else if (v0.angle > v1.angle) return 1;
                         else return 0;
