@@ -240,7 +240,7 @@ PolyContext.prototype.theorem = function(off,options) {
     }
     if (options.theta === undefined) options.theta = 0
     var theta = options.theta
-    options.theta += 0.01
+    options.theta += 0.02
     var pi = 3.14159;
     var A = addvertex(vector(1,-0.5,1), Color.green)
     var B = addvertex(vector(-0.5, 0, -0.5), Color.green)

@@ -33,7 +33,7 @@ var Geometry = {};
         dot: function(u,v) {
             if (!v) v = u;
             var w = 0;
-            for (var i = 0; i < u.length; i++) {
+            for (var i = 0; i < u.length && i < v.length; i++) {
                 w += u[i]*v[i];
             }
             return w;
@@ -61,25 +61,28 @@ var Geometry = {};
         },
         taxi: function(u,v) {
             var s = 0;
-            for (var i = 0; i < u.length; i++) {
-                s += Math.abs(u[i]-v[i]);
+            for (var i = 0; i < u.length || i < v.length; i++) {
+                s += Math.abs((u[i] || 0) - (v[i] || 0));
             }
             return s;
         },
         add: function(u,v) {
             var w = [];
-            for (var i = 0; i < u.length; i++) {
-                w[i] = u[i]+v[i];
+            for (var i = 0; i < u.length || i < v.length; i++) {
+                w[i] = (u[i] || 0) + (v[i] || 0);
             }
             return w;
         },
         add3: function(u,v,w) { 
             return Vector.add(u,Vector.add(v,w));
         },
+        add4: function(u,v,w,x) { 
+            return Vector.add(Vector.add(u,v),Vector.add(w,x));
+        },
         sub: function(u,v) {
             var w = [];
-            for (var i = 0; i < u.length; i++) {
-                w[i] = u[i]-v[i];
+            for (var i = 0; i < u.length || i < v.length; i++) {
+                w[i] = (u[i] || 0) - (v[i] || 0);
             }
             return w;
         },
@@ -173,9 +176,9 @@ var Geometry = {};
             var n = Vector.normalize(Vector.cross(p,q));
             return Vector.sub(r, Vector.mul(n,2*Vector.dot(n,r)));
         },
-        planereflect: function(P,r) {
-            // Reflect r in the plane (through origin) with normal P
-            return Vector.sub(r, Vector.mul(P,2*Vector.dot(P,r)));
+        planereflect: function(n,p) {
+            // Reflect r in the (hyper)plane (through origin) with normal n
+            return Vector.sub(p, Vector.mul(n,2*Vector.dot(p,n)));
         },
         reflectionmatrix: function(p,q) {
             var v0 = reflect(p,q,[1,0,0]);
@@ -222,8 +225,25 @@ var Geometry = {};
             var k = Vector.dot(p,p)/r2;
             //return [p[0],p[1],p[2],k];
             return Vector.div(p,k);
+        },
+        vprint: function(a) {
+            if (a.length != undefined) {
+                var s = "[";
+                for (var i = 0; i < a.length; i++) {
+                    s += " " + Vector.vprint(a[i]);
+                }
+                s += " ]";
+                return s;
+            } else {
+                // Neither toPrecision nor toFixed do what I
+                // want, so we shall do this:
+                if (a != Math.round(a)) {
+                    a = Math.round(a*1000)/1000;
+                }
+                return a.toString();
+            }
         }
-}
+    }
 
     // Manage sets of points, ordered on first coordinate with
     // reasonably efficient equality (up to epsilon).
@@ -620,23 +640,29 @@ var Geometry = {};
 
     // Maybe use a "map over all faces" function
     // TBD: include snub faces as well if required
-    Schwarz.prototype.makefacelines = function(facedata,hideface,centre,type,i) {
+    Schwarz.prototype.makefacelines = function(facedata,hideface,centre,type,i,radius) {
         //TBD: Also add snub faces
+        // Go through every face, compute lines of intersection with face of given type.
+        // 
         var points = this.points;
         var regions = this.regions;
         var regionpoints = facedata.regionpoints;
         var facelines = [];
-        var stelllimit = 1e4;
+        radius = radius || 1e4;
         for (var type1 = 0; type1 < 3; type1++) {
             if (!facedata.faces[type1] || hideface[type1]) continue;
             var faces1 = this.faces[type1];
             var rcentre1 = facedata.facedistances[type1];
             for (var j = 0; j < faces1.length; j++) {
+                // Intersect given face with every other face to get a line
                 if ((type != type1 || i != j) && faces1[j]) {
                     var p1 = Vector.mul(points[j],rcentre1);
                     var end1 = null, end2 = null, llength = null;
                     for (var type2 = 0; type2 < 3; type2++) {
                         if (!facedata.faces[type2] || hideface[type2]) continue;
+                        // Now intersect that line with the other faces to get
+                        // the points of intersection. Find the end points of
+                        // the segment (up to the given radius).
                         var faces2 = this.faces[type2];
                         var rcentre2 = facedata.facedistances[type2];
                         for (var k = 0; k < faces2.length; k++) {
@@ -645,7 +671,7 @@ var Geometry = {};
                                 faces2[k]) {
                                 var p2 = Vector.mul(points[k],rcentre2);
                                 var s = Vector.intersection(centre,p1,p2);
-                                if (s != null && Vector.dist(centre,s) < stelllimit) {
+                                if (s != null && Vector.length(s) < radius+1e-4) {
                                     if (!end1) end1 = s;
                                     else if (!end2) {
                                         end2 = s;
@@ -675,7 +701,7 @@ var Geometry = {};
         return facelines;
     }
 
-    Schwarz.prototype.stellate = function(facedata,hideface) {
+    Schwarz.prototype.stellate = function(facedata,hideface,radius) {
         var points = this.points;
         var regions = this.regions;
         facedata.facelines = [];
@@ -687,7 +713,7 @@ var Geometry = {};
                 }
                 var rcentre = facedata.facedistances[type];
                 var centre = Vector.mul(points[i],rcentre);
-                var facelines = this.makefacelines(facedata,hideface,centre,type,i);
+                var facelines = this.makefacelines(facedata,hideface,centre,type,i,radius);
                 // Now change to barycentric coords
                 // faces[i] is the list of regions in the face
                 // use coords based on first region
@@ -800,13 +826,69 @@ var Geometry = {};
         }
     }
     
+    // Get determinant of 4x4 matrix m
+    function determinant4(m) {
+        console.assert(m.length == 16);
+        var m00 = m[0],  m01 = m[1],  m02 = m[2],  m03 = m[3];
+        var m10 = m[4],  m11 = m[5],  m12 = m[6],  m13 = m[7];
+        var m20 = m[8],  m21 = m[9],  m22 = m[10], m23 = m[11];
+        var m30 = m[12], m31 = m[13], m32 = m[14], m33 = m[15];
+        var value =
+            m03*m12*m21*m30 - m02*m13*m21*m30 - m03*m11*m22*m30 + m01*m13*m22*m30+
+            m02*m11*m23*m30 - m01*m12*m23*m30 - m03*m12*m20*m31 + m02*m13*m20*m31+
+            m03*m10*m22*m31 - m00*m13*m22*m31 - m02*m10*m23*m31 + m00*m12*m23*m31+
+            m03*m11*m20*m32 - m01*m13*m20*m32 - m03*m10*m21*m32 + m00*m13*m21*m32+
+            m01*m10*m23*m32 - m00*m11*m23*m32 - m02*m11*m20*m33 + m01*m12*m20*m33+
+            m02*m10*m21*m33 - m00*m12*m21*m33 - m01*m10*m22*m33 + m00*m11*m22*m33;
+        return value;
+    }
+
+    // Invert a 4x4 matrix m
+    function invert4(m) {
+        console.assert(m.length == 16);
+        var m00 = m[0],  m01 = m[1],  m02 = m[2],  m03 = m[3];
+        var m10 = m[4],  m11 = m[5],  m12 = m[6],  m13 = m[7];
+        var m20 = m[8],  m21 = m[9],  m22 = m[10], m23 = m[11];
+        var m30 = m[12], m31 = m[13], m32 = m[14], m33 = m[15];
+        var n00 = m12*m23*m31 - m13*m22*m31 + m13*m21*m32 - m11*m23*m32 - m12*m21*m33 + m11*m22*m33;
+        var n01 = m03*m22*m31 - m02*m23*m31 - m03*m21*m32 + m01*m23*m32 + m02*m21*m33 - m01*m22*m33;
+        var n02 = m02*m13*m31 - m03*m12*m31 + m03*m11*m32 - m01*m13*m32 - m02*m11*m33 + m01*m12*m33;
+        var n03 = m03*m12*m21 - m02*m13*m21 - m03*m11*m22 + m01*m13*m22 + m02*m11*m23 - m01*m12*m23;
+        var n10 = m13*m22*m30 - m12*m23*m30 - m13*m20*m32 + m10*m23*m32 + m12*m20*m33 - m10*m22*m33;
+        var n11 = m02*m23*m30 - m03*m22*m30 + m03*m20*m32 - m00*m23*m32 - m02*m20*m33 + m00*m22*m33;
+        var n12 = m03*m12*m30 - m02*m13*m30 - m03*m10*m32 + m00*m13*m32 + m02*m10*m33 - m00*m12*m33;
+        var n13 = m02*m13*m20 - m03*m12*m20 + m03*m10*m22 - m00*m13*m22 - m02*m10*m23 + m00*m12*m23;
+        var n20 = m11*m23*m30 - m13*m21*m30 + m13*m20*m31 - m10*m23*m31 - m11*m20*m33 + m10*m21*m33;
+        var n21 = m03*m21*m30 - m01*m23*m30 - m03*m20*m31 + m00*m23*m31 + m01*m20*m33 - m00*m21*m33;
+        var n22 = m01*m13*m30 - m03*m11*m30 + m03*m10*m31 - m00*m13*m31 - m01*m10*m33 + m00*m11*m33;
+        var n23 = m03*m11*m20 - m01*m13*m20 - m03*m10*m21 + m00*m13*m21 + m01*m10*m23 - m00*m11*m23;
+        var n30 = m12*m21*m30 - m11*m22*m30 - m12*m20*m31 + m10*m22*m31 + m11*m20*m32 - m10*m21*m32;
+        var n31 = m01*m22*m30 - m02*m21*m30 + m02*m20*m31 - m00*m22*m31 - m01*m20*m32 + m00*m21*m32;
+        var n32 = m02*m11*m30 - m01*m12*m30 - m02*m10*m31 + m00*m12*m31 + m01*m10*m32 - m00*m11*m32;
+        var n33 = m01*m12*m20 - m02*m11*m20 + m02*m10*m21 - m00*m12*m21 - m01*m10*m22 + m00*m11*m22;
+        var n = [n00,n01,n02,n03, n10,n11,n12,n13, n20,n21,n22,n23, n30,n31,n32,n33]
+        var d = determinant4(m);
+        for (var i = 0; i < n.length; i++) n[i] /= d;
+        return n;
+    }
+
+    // Apply a 4x4 matrix m to a 4-vector v
+    function apply4(m,v) {
+        console.assert(m.length == 16);
+        console.assert(v.length == 4);
+        return [m[0]*v[0]  + m[1] *v[1] + m[2] * v[2]+m[3] *v[3],
+                m[4]*v[0]  + m[5] *v[1] + m[6] * v[2]+m[7] *v[3],
+                m[8]*v[0]  + m[9] *v[1] + m[10]* v[2]+m[11]*v[3],
+                m[12]*v[0] + m[13]*v[1] + m[14]* v[2]+m[15]*v[3]];
+    }
+
     // Set up the external symbols.
     Geometry.Vector = Vector;
     Geometry.PointSet = PointSet;
     Geometry.Schwarz = Schwarz;
     Geometry.makematrix = makematrix;
     Geometry.mapply = mapply;
+    Geometry.invert4 = invert4;
+    Geometry.apply4 = apply4;
     Geometry.test = test;
 }())
-
-// Geometry.test();

@@ -264,6 +264,10 @@ PolyContext.prototype.processoptions = function(options) {
             context.initt = Number(matches[1]);
         } else if (matches = arg.match(/^z=([\d.]+)$/)) {
             context.initz = Number(matches[1]);
+        } else if (matches = arg.match(/^radius=([\d.]+)$/)) {
+            context.radius = Number(matches[1]);
+        } else if (matches = arg.match(/^explode=([\d.]+)$/)) {
+            context.explode = Number(matches[1]);
         } else if (matches = arg.match(/^tridepth=([\d]+)$/)) {
             context.tridepth = Number(matches[1]);
         } else if (matches = arg.match(/^tour=([\d]+)$/)) {
@@ -364,7 +368,6 @@ PolyContext.prototype.handleKey = function(key) {
         break;
     case 'h':
         this.dohemi = !this.dohemi;
-        context.needclone = true;
         break;
     case 's':
         this.dosnubify = !this.dosnubify;
@@ -615,7 +618,9 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
                     var c = Vector.mid(p1,p2) // Edge centre
                     var e = Vector.sub(p2,p1) // Edge vector
                     var v = Vector.sub(p1,p0) // Previous edge
-                    var k = -Vector.dot(p0,e)/Vector.dot(v,e) 
+                    var tmp = Vector.dot(v,e);
+                    if (Math.abs(tmp) < 1e-4) break; // Avoid divide by zero & infinities.
+                    var k = -Vector.dot(p0,e)/tmp;
                     var q = Vector.add(p0,Vector.mul(v,k)) // Intersection with centre line
                     // q = kc => q.c = k*c.c => k = q.c/c.c
                     var c0 = Vector.sub(c,centre)
@@ -724,18 +729,20 @@ PolyContext.prototype.drawfaces = function() {
                new THREE.Vector2(0,1)];
     // Now go through the facepoint lists for each type of face
     for (var type = 0; type < 3; type++) {
+        //console.log(facedata.faces[type],type);
         if (!facedata.faces[type] || this.hideface[type]) continue;
+        var facepoints = schwarz.faces[type];
         if (this.dostellate) {
             // Draw stellated face.
-            var facepoints = schwarz.faces[type];
             for (var i = 0; i < facepoints.length; i++) {
                 var plist = facepoints[i];
                 if (plist) {
                     // Add a centre vertex, this is a corner of a Schwarz triangle.
                     // facedistances[type] tells us how far it is from the origin (the face
-                    // centres, ie. the region points are at distance 1.
+                    // centres, ie. the region points are at distance 1).
                     var centre = Vector.mul(points[i],facedata.facedistances[type])                    
                     var facelines = facedata.facelines[type];
+                    if (!facelines) continue;
                     for (var j = 0; j < facelines.length; j++) {
                         // Triangle from centre to two vertices on plist
                         var p1 = schwarz.applybary(facelines[j][0],plist[0]);
@@ -745,7 +752,6 @@ PolyContext.prototype.drawfaces = function() {
                 }
             }
         } else {
-            var facepoints = schwarz.faces[type];
             this.doretroflex = true; // Gets set to false if we don't need it
             for (var i = 0; i < facepoints.length; i++) {
                 var fpoints = facepoints[i];
@@ -828,7 +834,7 @@ PolyContext.prototype.setup = function(tri) {
         this.midsphere = facedata.midsphere;
     }
     if (this.dostellate) {
-        schwarz.stellate(facedata, this.hideface);
+        schwarz.stellate(facedata, this.hideface, this.radius);
     }
 }
 
@@ -848,6 +854,7 @@ PolyContext.prototype.drawcompound = function(drawpolyhedron) {
     this.transmat = null;
     this.pointset = null;
     drawpolyhedron(true,"");
+    //this.renderscene();
     if (this.docompound) {
         console.assert(this.pointset,"No pointset defined for compounding");
         // Set up for compounding
@@ -891,7 +898,7 @@ PolyContext.prototype.drawcompound = function(drawpolyhedron) {
                     this.transmat = Geometry.makematrix(newtrans,ip,iq,ir);
                     //console.log(JSON.stringify(this.transmat));
                     //console.log("Compound " + this.compound + " " + newtrans);
-                    drawpolyhedron(false,newtrans);
+                    drawpolyhedron(false);
                     pointsets.push({trans: newtrans, pointset: newset});
                     this.compound++;
                 }
@@ -1047,8 +1054,10 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
 
     this.renderer.setSize(width,height); 
 
-    this.camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000); 
+    this.camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000);
     this.camera.position.z = this.initz; 
+
+    this.renderscene = function() { context.renderer.render(scene, context.camera); }
 
     var controls = new THREE.OrbitControls( this.camera, canvas );
     var oldupdate = controls.update;
@@ -1062,8 +1071,8 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
         var offgeom = context.offgeom;
         var offcolors = context.offcolors;
         var geometry = new THREE.Geometry;
-        function drawpolyhedron(init,trans) {
-            //console.log("drawpolyhedron " + context.compound + " " + trans);
+        function drawpolyhedron(init) {
+            //console.log("drawpolyhedron " + context.compound);
             if (context.docompound && !context.pointset) {
                 // Use the OFF file vertices here as there will usually be fewer of them
                 if (context.verbose) console.log("Generating pointset with " + off.vertices.length + " points")
@@ -1335,27 +1344,36 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                 context.material.vertexColors = context.colortype();
                 var points = context.tours[context.tournum%context.tours.length];
                 var tripoint = context.interpolatepoint(context.stopwatch.getTime(), points);
-                var drawpolyhedron = function (init) {
+
+                context.drawcompound(function (init) {
                     if (init) context.setup(tripoint); // Make basic polyhedron
                     context.drawpolyhedron();
+                });
+                // Prepare for rendering...
+                console.assert(geometry.faces.length === geometry.faceVertexUvs[0].length);
+
+                // Looks like we need to clone if the number of vertices
+                // or faces has changed.
+                if (geometry.vertices.length != context.npoints ||
+                    geometry.faces.length != context.nfaces) {
+                    context.needclone = true;
+                    geometry.vertices.length = context.npoints;
+                    geometry.faces.length = context.nfaces;
+                    geometry.faceVertexUvs[0].length = context.nfaces;
                 }
-                context.drawcompound(drawpolyhedron);
-                // Post process...
+                geometry.computeFaceNormals();
                 geometry.verticesNeedUpdate = true;
                 geometry.elementsNeedUpdate = true;
                 geometry.normalsNeedUpdate = true;
                 geometry.colorsNeedUpdate = true;
                 geometry.uvsNeedUpdate = true;
-                geometry.computeFaceNormals();
-                console.assert(geometry.faces.length === geometry.faceVertexUvs[0].length);
-                if (context.needclone ||
-                    geometry.vertices.length != context.npoints ||
-                    geometry.faces.length != context.nfaces) {
+                if (context.needclone) {
                     context.needclone = false;
-                    //console.log("Cloning geometry: " + context.npoints + " " + context.nfaces);
-                    geometry.vertices.length = context.npoints;
-                    geometry.faces.length = context.nfaces;
-                    geometry.faceVertexUvs[0].length = context.nfaces;
+                    console.log("Cloning geometry: " + context.npoints + " " + context.nfaces);
+                    // This is rather horrible, but I haven't found a more economical
+                    // way of doing this with the three.js version I'm using (and it's all
+                    // changed (for the better I'm sure) in more recent versions).
+                    // We don't do this every frame at least.
                     var newgeometry = geometry.clone()
                     scene.remove(mesh);
                     geometry.dispose();
@@ -1376,6 +1394,10 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                 scene.add(context.normalshelper);
             }
         }
+        // Render our scene
+        context.renderer.render(scene, context.camera);
+
+        // And update for next time around
         needupdate = PolyContext.UpdateNone;
 
         // This is handled by THREE.js so we don't need to update model
@@ -1408,7 +1430,6 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
         if (context.stopwatch.running) {
             needupdate = PolyContext.UpdateModel;
         }
-        context.renderer.render(scene, context.camera);
     };
     this.update(PolyContext.UpdateModel);
 }
