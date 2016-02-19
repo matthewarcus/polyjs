@@ -460,6 +460,14 @@ PolyContext.prototype.handleKey = function(key) {
     case '4':
         this.hideface[3] = !this.hideface[3];
         break;
+    case '9':
+        this.offoptions.C *= 1.1;
+        this.needclone = true;
+        break;
+    case '0':
+        this.offoptions.C /= 1.1;
+        this.needclone = true;
+        break;
     default:
         handled = false;
     }
@@ -1305,10 +1313,17 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                 // Maybe this should take a sequence of functions
                 if (context.fname) {
                     if (context.verbose) console.log("Calling ", context.fname)
-                    off = context[context.fname](off, context.offoptions)
+                    off = context[context.fname](off,context.offoptions,context.stopwatch.running)
+                    //context.needclone = true;
                 }
                 if (off) {
+                    var nvertices1 = context.offgeom.vertices.length;
+                    var nfaces1 = context.offgeom.faces.length;
                     THREE.OFFLoader.display(off, context.offgeom, options);
+                    if (nvertices1 != context.offgeom.vertices.length ||
+                        nfaces1 != context.offgeom.faces.length) {
+                        context.needclone = true;
+                    }
                     var geometry = context.offgeom
                     context.numcolorstyles = 3; // Yuk.
                     context.offcolors = [];
@@ -1369,7 +1384,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                 geometry.uvsNeedUpdate = true;
                 if (context.needclone) {
                     context.needclone = false;
-                    console.log("Cloning geometry: " + context.npoints + " " + context.nfaces);
+                    //console.log("Cloning geometry: " + context.npoints + " " + context.nfaces);
                     // This is rather horrible, but I haven't found a more economical
                     // way of doing this with the three.js version I'm using (and it's all
                     // changed (for the better I'm sure) in more recent versions).
