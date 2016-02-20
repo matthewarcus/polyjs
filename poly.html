@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <title>PolyJS Viewer</title> 
     <style>
-      * { border: 0; padding: 0; margin: 0 }
+      * { border: 0; padding: 0; margin: 0; }
       canvas { width: 100%; height: 100%; background: black; }
+      body { overflow: hidden; }
     </style> 
   </head> 
   <body> 
@@ -18,7 +19,9 @@
     <script src="js/hyper.js"></script>
     <canvas id="canvas1"></canvas>
     <script>
+      window.onload = function() {
       PolyContext.runOnWindow(canvas1);
+      }
     </script>
 </body> 
 </html>
