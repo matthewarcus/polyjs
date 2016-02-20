@@ -1059,7 +1059,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
         (webglAvailable(canvas)) ? 
         new THREE.WebGLRenderer(params) : 
         new THREE.CanvasRenderer(params);
-
+    //this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(width,height); 
 
     this.camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000);

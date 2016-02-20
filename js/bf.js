@@ -538,6 +538,94 @@ PolyContext.prototype.invert = function (off, options) {
     return off
 }
 
+PolyContext.prototype.zoomer = (function () {
+    var zoom = 2;
+    var theta = 0;
+    var types;
+    return function(off,options) {
+        var Color = THREE.OFFLoader.Utils.Color;
+        var vmul = THREE.OFFLoader.Utils.vmul
+        var vector = THREE.OFFLoader.Utils.vector
+        var vertices = [];
+        var faces = [];
+        var z = 100;
+        var depth = 15;
+        var width = 0.1;
+        var p = vector(50,50,-1000);
+        vertices.push(p);
+        var pindex = 0;
+        var scale = zoom;
+        if (!types) {
+            types = [];
+            for (var n = 0; n < 8*depth; n++) {
+                types[n] = Math.floor(8*Math.random());
+            }
+        }
+        var a = Math.cos(theta);
+        var b = -Math.sin(theta);
+        var c = Math.sin(theta);
+        var d = Math.cos(theta);
+        theta += 0.02;
+        function rotate(v) {
+            x = v.x;
+            y = v.y;
+            v.x = a*x + b*y;
+            v.y = c*x + d*y;
+            return v;
+        }
+        var index = 0;
+        var color = Color.straw;
+        for (var n = 0; n < depth; n ++) {
+            for (var i = -1; i <= +1; i += 1) {
+                for (var j = -1; j <= +1; j += 1) {
+                    if (i == 0 && j == 0) continue;
+                    var v0 = rotate(vmul(vector(i-width,j-width,0),scale));
+                    var v1 = rotate(vmul(vector(i+width,j-width,0),scale));
+                    var v2 = rotate(vmul(vector(i+width,j+width,0),scale));
+                    var v3 = rotate(vmul(vector(i-width,j+width,0),scale));
+                    var vindex = vertices.length;
+                    vertices.push(v0);
+                    vertices.push(v1);
+                    vertices.push(v2);
+                    vertices.push(v3);
+                    faces.push({ vlist: [vindex+0,vindex+1,vindex+2,vindex+3], type: types[index++] });
+                    faces.push({ vlist: [vindex+0,vindex+1,pindex], color: color });
+                    faces.push({ vlist: [vindex+1,vindex+2,pindex], color: color });
+                    faces.push({ vlist: [vindex+2,vindex+3,pindex], color: color });
+                    faces.push({ vlist: [vindex+3,vindex+0,pindex], color: color });
+                }
+            }
+            scale /= 2;
+        }
+        if (1) {
+            zoom *= 1.05
+            if (zoom > 4) {
+                zoom /= 2;
+                for (var n = 0; n < 8*depth; n++) {
+                    if (n < 8*depth-8) {
+                        types[n] = types[n+8];
+                    } else {
+                        types[n] = Math.floor(6*Math.random());
+                    }
+                }
+            }
+        } else {
+            zoom *= 0.95
+            if (zoom < 2) {
+                zoom *= 2;
+                for (n = 8*depth; n > 0; n--) {
+                    if (n-1 >= 8) {
+                        types[n-1] = types[n-9];
+                    } else {
+                        types[n-1] = Math.floor(6*Math.random());
+                    }
+                }
+            }
+        }
+        return { vertices: vertices, faces: faces }
+    }
+})()
+
 //eqtest()
 // function doit() {
 //     vertices.push([0,0,0]);

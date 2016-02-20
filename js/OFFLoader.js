@@ -158,6 +158,7 @@ THREE.OFFLoader.Utils = {
         orange: new THREE.Color(1,0.5,0),
         raspberry: new THREE.Color(1,0,0.5),
         purple: new THREE.Color(0.5,0.1,0.5),
+        straw: new THREE.Color(1,1,0.5),
     }
 }
 
@@ -263,6 +264,7 @@ THREE.Geometry.prototype.offMerge = function ( geometry, matrix, materialIndexOf
     this.offVertexOffset += vertices2.length
     this.offFaceOffset += faces2.length
     this.offUvOffset += uvs2.length
+    
     if ( materialIndexOffset === undefined ) materialIndexOffset = 0;
     if ( matrix !== undefined ) {
 	normalMatrix = new THREE.Matrix3().getNormalMatrix( matrix );
