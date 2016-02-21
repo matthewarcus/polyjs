@@ -480,8 +480,7 @@ PolyContext.prototype.handleKey = function(key) {
 // Currently, we call this function several times for each actual point
 // (unless we are doing an exploded view).
 // so there is some significant optimizations possible here.
-// Return the index in the geometries list of points.
-
+// Return the index in the geometry's list of points.
 PolyContext.prototype.drawpoint = function(p,offset,facefact) {
     var Vector = Geometry.Vector;
     var w = p[3] || 1; // Homogeneous coords
@@ -502,18 +501,19 @@ PolyContext.prototype.drawpoint = function(p,offset,facefact) {
             x += explode*offset[0];
             y += explode*offset[1];
             z += explode*offset[2];
-        } else if (facefact) {
-            // Give each facetype a slightly different offset
-            x += facefact*offset[0];
-            y += facefact*offset[1];
-            z += facefact*offset[2];
         }
     }
+    if (facefact) {
+        x *= (1+facefact);
+        y *= (1+facefact);
+        z *= (1+facefact);
+    }
     if (this.transmat) {
-        p = [x,y,z];
-        x = Vector.dot(this.transmat[0],p);
-        y = Vector.dot(this.transmat[1],p);
-        z = Vector.dot(this.transmat[2],p);
+        var m = this.transmat;
+        var x1 = m[0][0]*x + m[0][1]*y + m[0][2]*z;
+        var y1 = m[1][0]*x + m[1][1]*y + m[1][2]*z;
+        var z1 = m[2][0]*x + m[2][1]*y + m[2][2]*z;
+        x = x1; y = y1; z = z1;
     }
     return this.drawpoint0(x,y,z);
 }
@@ -521,14 +521,14 @@ PolyContext.prototype.drawpoint = function(p,offset,facefact) {
 // TBD: encapsulate the various drawing options
 // For n > 0, draw a Sierpinski triangle (or some
 // variation thereof).
-PolyContext.prototype.drawtriangle = function(p,q,r,tcoords,offset,type,i,n) {
+PolyContext.prototype.drawtriangle = function(p,q,r,uvs,offset,type,i,n) {
     var Vector = Geometry.Vector;
     if (n == 0) {
         var facefact = (this.compound+type)*0.0001 // Reduce stitching
         var index0 = this.drawpoint(p,offset,facefact);
         var index1 = this.drawpoint(q,offset,facefact);
         var index2 = this.drawpoint(r,offset,facefact);
-        this.drawtriangle0(index0,index1,index2,tcoords,type,i);
+        this.drawtriangle0(index0,index1,index2,uvs,type,i);
     } else {
         // Vary ttt for slightly tacky rotating effect.
         var ttt = 0.5;
@@ -540,41 +540,33 @@ PolyContext.prototype.drawtriangle = function(p,q,r,tcoords,offset,type,i,n) {
         //var k = n%4;
         var k = 3;
         // TBD: texture coordinates!
-        if (k != 0) this.drawtriangle(p,p1,r1,tcoords,offset,type,i,n-1);
-        if (k != 1) this.drawtriangle(p1,q,q1,tcoords,offset,type,i,n-1);
-        if (k != 2) this.drawtriangle(r1,q1,r,tcoords,offset,type,i,n-1);
-        if (k != 3) this.drawtriangle(p1,q1,r1,tcoords,offset,type,i,n-1);
+        if (k != 0) this.drawtriangle(p,p1,r1,uvs,offset,type,i,n-1);
+        if (k != 1) this.drawtriangle(p1,q,q1,uvs,offset,type,i,n-1);
+        if (k != 2) this.drawtriangle(r1,q1,r,uvs,offset,type,i,n-1);
+        if (k != 3) this.drawtriangle(p1,q1,r1,uvs,offset,type,i,n-1);
     }
 }
 
 PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,parity) {
+    function mod(i,n) {
+        i %= n;
+        if (i < 0) i += n;
+        return i;
+    }
     var Vector = Geometry.Vector;
+    var context = this;
     if (this.drawface0) {
         this.drawface0(plist); // Call alternative function, if defined
     } else {
-        // Work out texture coordinates - these should be coherent across the face
-        // Firstly, get orthogonal axes in face plane.
-        // We use the first point, relative to the centre as the u-axis
-        var uaxis;
-        for (var i = 0; i < plist.length; i++) {
-            // Some points may coincide with the centre so try and find
-            // one that doesn't. If we fail, the face is degenerate anyway
-            if (Vector.taxi(plist[i],centre) > 1e-4) {
-                uaxis = Vector.normalize(Vector.sub(plist[i],centre));
-                break;
-            }
-        }
-        //console.assert(uaxis,"No suitable u axis for texture coordinate generation");
-        if (!uaxis) uaxis = [1,0,0] // eg. if the face is degenerate
-        var vaxis = Vector.normalize(Vector.cross(centre,uaxis)); // centre is normal
-        if (parity) vaxis = Vector.negate(vaxis); // Mirror image
-
+        var needuvs = context.texturefile;
         if (this.dohemi) {
-            // Do this first as might modify plist
+            // Do this before we do any modifications to plist for retroflex edges.
             // TBD: Proper texture coordinates!
-            var uvs = [new THREE.Vector2(0,0),
+            if (needuvs) {
+                var uvs = [new THREE.Vector2(0,0),
                        new THREE.Vector2(1,0),
                        new THREE.Vector2(0,1)];
+            }
             for (var i = 0; i < plist.length; i++) {
                 var p1 = plist[i];
                 var p2 = plist[(i+1)%plist.length];
@@ -585,20 +577,38 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
             }
         }
 
-        // Compute uvs for face points
-        var uvs = []; // Try not to clash with hemi uvs
-        for (var i = 0; i < plist.length; i++) {
-            var u = 0.5 + Vector.dot(Vector.sub(plist[i],centre),uaxis);
-            var v = 0.5 + Vector.dot(Vector.sub(plist[i],centre),vaxis);
-            uvs.push(new THREE.Vector2(u,v));
-        }
-        var uvcentre = new THREE.Vector2(0.5,0.5);
+        var faceuvs = [];
+        if (needuvs) {
+            // We really ought to only calculate uvs when we actually want to texture the object.
+            // Work out texture coordinates - these should be coherent across the face
+            // Firstly, get orthogonal axes in face plane.
+            // We use the first point, relative to the centre as the u-axis
+            var uaxis;
+            for (var i = 0; i < plist.length; i++) {
+                // Some points may coincide with the centre so try and find
+                // one that doesn't. If we fail, the face is degenerate anyway
+                if (Vector.taxi(plist[i],centre) > 1e-4) {
+                    uaxis = Vector.normalize(Vector.sub(plist[i],centre));
+                    break;
+                }
+            }
+            //console.assert(uaxis,"No suitable u axis for texture coordinate generation");
+            if (!uaxis) uaxis = [1,0,0] // eg. if the face is degenerate
+            var vaxis = Vector.normalize(Vector.cross(centre,uaxis)); // centre is normal
+            if (parity) vaxis = Vector.negate(vaxis); // Mirror image
 
+            // Compute uvs for face points
+            for (var i = 0; i < plist.length; i++) {
+                var u = 0.5 + Vector.dot(Vector.sub(plist[i],centre),uaxis);
+                var v = 0.5 + Vector.dot(Vector.sub(plist[i],centre),vaxis);
+                faceuvs.push(new THREE.Vector2(u,v));
+            }
+            var uvcentre = new THREE.Vector2(0.5,0.5);
+        }
         if (plist.length == 3) {
             // Should do this when some edges are degenerate too.
             this.drawtriangle(plist[0],plist[1],plist[2],
-                              [uvs[0],uvs[1],uvs[2]],
-                              centre,facetype,index,tridepth);
+                              faceuvs,centre,facetype,index,tridepth);
         } else {
             // Triangulation phase
             // Now we must work out if we have any retroflex edges
@@ -610,12 +620,7 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
                 // We don't need to do this for every vertex - can do
                 // calculation once for all the faces of a particular type.
                 var newplist = []
-                var newuvs = []
-                var mod = function(i,n) {
-                    i %= n
-                    if (i < 0) i += n
-                    return i;
-                }
+                var newfaceuvs = []
                 for (var i = 0; i < plist.length; i++) {
                     // Look for a retroflex edge: adjacent edges intersect
                     // edge side of centre, so use that as new vertex and
@@ -635,32 +640,36 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
                     var q0 = Vector.sub(q,centre)
                     var efact = Vector.dot(q0,c0)/Vector.dot(c0,c0)
                     if (0 < efact && efact < 1) {
-                        // q is new point to draw triangle to edge from
-                        var u = 0.5 + Vector.dot(Vector.sub(q,centre),uaxis);
-                        var v = 0.5 + Vector.dot(Vector.sub(q,centre),vaxis);
-                        var newuv = new THREE.Vector2(u,v);
-                        newuvs.push(newuv)
+                        if (needuvs) {
+                            // q is new point to draw triangle to edge from
+                            var u = 0.5 + Vector.dot(Vector.sub(q,centre),uaxis);
+                            var v = 0.5 + Vector.dot(Vector.sub(q,centre),vaxis);
+                            var newuv = new THREE.Vector2(u,v);
+                            newfaceuvs.push(newuv);
+                            var uvs = [newuv,faceuvs[i],faceuvs[(i+1)%plist.length]];
+                        }
                         newplist.push(q)
-                        this.drawtriangle(q,p1,p2,
-                                          [newuv,uvs[i],uvs[(i+1)%plist.length]],
+                        this.drawtriangle(q,p1,p2,uvs,
                                           centre,facetype,index,tridepth);
                     }
                 }
                 if (newplist.length > 0) {
                     plist = newplist;
-                    uvs = newuvs;
+                    faceuvs = newfaceuvs;
                 } else {
                     // No retroflex needed for other faces.
                     this.doretroflex = false;
                 }
             }
-            console.assert(uvs.length == plist.length)
+            console.assert(faceuvs.length == 0 || faceuvs.length == plist.length)
             for (var i = 0; i < plist.length; i++) {
                 var p1 = plist[i];
                 var p2 = plist[(i+1)%plist.length];
+                if (needuvs) {
+                    var uvs = [uvcentre,faceuvs[i],faceuvs[(i+1)%plist.length]];
+                }
                 if (Vector.taxi(p1,p2) > 1e-4) { // Don't draw if degenerate
-                    this.drawtriangle(centre,p1,p2,
-                                      [uvcentre,uvs[i],uvs[(i+1)%plist.length]],
+                    this.drawtriangle(centre,p1,p2,uvs,
                                       centre,facetype,index,tridepth);
                 }
             }
@@ -719,7 +728,8 @@ PolyContext.prototype.drawregions = function() {
             }
             var facetype = 4+region[3];
             var centre = Vector.invert(regionpoints[i],this.midsphere);
-            this.drawface(centre,plist,facetype,i,this.tridepth,region[3]);
+            var parity = region[3];
+            this.drawface(centre,plist,facetype,i,this.tridepth,parity);
         }
     }
 }
@@ -731,10 +741,12 @@ PolyContext.prototype.drawfaces = function() {
     var points = schwarz.points;
     var regions = schwarz.regions;
     var regionpoints = facedata.regionpoints;
-    // TBD: do this properly!
-    var uvs = [new THREE.Vector2(0,0),
-               new THREE.Vector2(1,0),
-               new THREE.Vector2(0,1)];
+    if (this.dostellate && this.texturefile) {
+        // TBD: do this properly!
+        var uvs = [new THREE.Vector2(0,0),
+                   new THREE.Vector2(1,0),
+                   new THREE.Vector2(0,1)];
+    }
     // Now go through the facepoint lists for each type of face
     for (var type = 0; type < 3; type++) {
         //console.log(facedata.faces[type],type);
@@ -1024,9 +1036,13 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
     
     var scene = new THREE.Scene();
     // We just have a single main object at the moment.
-    var mesh = new THREE.Mesh(new THREE.Geometry(), material);
+    if (context.offfile || context.fname) {
+        var mesh = new THREE.Mesh(new THREE.Geometry(), material);
+        context.offgeom = mesh.geometry
+    } else {
+        var mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
+    }
     mesh.geometry.dynamic = true;
-    context.offgeom = mesh.geometry
     scene.add(mesh);
     
     var light = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -1193,7 +1209,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
 
     var compoundColors = [
         new THREE.Color(0xff0000),new THREE.Color(0x00ff00),new THREE.Color(0x0000ff),
-        new THREE.Color(0xffff00),new THREE.Color(0x00ffff),new THREE.Color(0xff00ff),
+        new THREE.Color(0x00ffff),new THREE.Color(0xff00ff),new THREE.Color(0xffff00),
         new THREE.Color(0x808080),new THREE.Color(0xffffff),
     ];
     var faceColors = basiccolors.map(function(c){ return new THREE.Color(c); });
@@ -1205,27 +1221,38 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
         return colors[(index + context.coloroffset)%colors.length];
     }
     this.colorface = function(face,type,index,compound) {
+        if (!face.colors) face.colors = [0,0,0];
         var colorstyle = this.colorstyle;
+        var color;
         if (colorstyle == 0) {
-            face.color = getcolor(compoundColors,compound);
+            color = getcolor(compoundColors,compound);
         } else if (colorstyle == 1) {
-            face.color = getcolor(faceColors,type);
+            color = getcolor(faceColors,type);
         } else if (colorstyle == 2) {
-            face.color = getcolor(compoundColors,index);
-        } else if (colorstyle == 3) {
-            face.vertexColors = [getcolor(compoundColors,0),
-                                 getcolor(compoundColors,1),
-                                 getcolor(compoundColors,2)];
-        } else if (colorstyle == 4) {
-            var facecolor = getcolor(faceColors,type);;
-            face.vertexColors = [black,facecolor,facecolor];
-        } else if (colorstyle == 5) {
-            var facecolor = getcolor(compoundColors,compound);
-            face.vertexColors = [black,facecolor,facecolor];
+            color = getcolor(compoundColors,index);
         } else if (colorstyle == 6) {
-            face.color = getcolor(compoundColors,0);
+            color = getcolor(compoundColors,0);
         } else if (colorstyle == 7) {
-            face.color = white;
+            color = white;
+        }
+        if (color) {
+            face.colors[0] = face.colors[1] = face.colors[2] = color;
+        } else {
+            if (colorstyle == 3) {
+                face.colors[0] = getcolor(compoundColors,0);
+                face.colors[1] = getcolor(compoundColors,1);
+                face.colors[2] = getcolor(compoundColors,2);
+            } else if (colorstyle == 4) {
+                var facecolor = getcolor(faceColors,type);;
+                face.colors[0] = black;
+                face.colors[1] = face.colors[2] = facecolor;
+            } else if (colorstyle == 5) {
+                var facecolor = getcolor(compoundColors,compound);
+                face.colors[0] = black;
+                face.colors[1] = face.colors[2] = facecolor;
+            } else {
+                console.assert(false,"No colorstyle defined");
+            }
         }
     }
     this.colortype = function() {
@@ -1249,34 +1276,29 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                             false);
 
     this.drawpoint0 = function (x,y,z) {
-        var geometry = mesh.geometry
-        // If we need to add new points to the geometry
-        // make sure that we redraw properly.
-        if (this.npoints == geometry.vertices.length) {
-            geometry.vertices.push(new THREE.Vector3());
-            this.needclone = true;
+        if (this.npoints == this.vertices.length) {
+            this.vertices.push(new THREE.Vector3());
         }
-        var u = geometry.vertices[this.npoints];
+        var u = this.vertices[this.npoints];
         u.x = x; u.y = y; u.z = z;
         return this.npoints++;
     }
 
-    this.drawtriangle0 = function(a,b,c,tcoords,type,index) {
-        console.assert(tcoords);
-        var geometry = mesh.geometry
-        if (this.nfaces == geometry.faces.length) {
-            geometry.faces.push(new THREE.Face3());
-            console.assert(geometry.faceVertexUvs[0].length === this.nfaces);
-            geometry.faceVertexUvs[0].push([0,0,0]);
-            this.needclone = true;
+    this.drawtriangle0 = function(a,b,c,uvs,type,index) {
+        var needuvs = context.texturefile;
+        if (this.nfaces == this.faces.length) {
+            this.faces.push({ vlist: [0,0,0],
+                              uvs: [new THREE.Vector2,new THREE.Vector2,new THREE.Vector2] });
+            this.needclone = true; // Not sure I really need this now.
         }
-        var face = geometry.faces[this.nfaces];
-        face.a = a; face.b = b; face.c = c;
-        if (tcoords) {
-            var uv = geometry.faceVertexUvs[0][this.nfaces];
-            uv[0] = tcoords[0];
-            uv[1] = tcoords[1];
-            uv[2] = tcoords[2];
+        var face = this.faces[this.nfaces];
+        face.vlist[0] = a;
+        face.vlist[1] = b;
+        face.vlist[2] = c;
+        if (needuvs) {
+            face.uvs[0].copy(uvs[0]);
+            face.uvs[1].copy(uvs[1]);
+            face.uvs[2].copy(uvs[2]);
         }
         this.colorface(face,type,index,this.compound);
         this.nfaces++;
@@ -1325,18 +1347,27 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                         context.needclone = true;
                     }
                     var geometry = context.offgeom
-                    context.numcolorstyles = 3; // Yuk.
-                    context.offcolors = [];
-                    for (var i = 0; i < geometry.faces.length; i++) {
-                        var c = geometry.faces[i].color.clone()
-                        context.offcolors.push(c);
+                    {
+                        context.numcolorstyles = 3; // Yuk.
+                        if (!context.offcolors) context.offcolors = [];
+                        for (var i = 0; i < geometry.faces.length; i++) {
+                            if (i < context.offcolors.length) {
+                                context.offcolors[i].copy(geometry.faces[i].color);
+                            } else {
+                                context.offcolors[i] = geometry.faces[i].color.clone();
+                            }
+                        }
+                        context.offcolors.length = geometry.faces.length;
                     }
+                    // If the off says it needs a clone, clone it.
+                    if (off.needclone) context.needclone = true;
                     if (context.docompound) {
                         context.offcompound(off);
                         if (context.verbose) console.log("Compound of", context.compound);
                     } else if (context.needclone) {
                         context.needclone = false
                         if (context.verbose) console.log("Cloning")
+                        // Yuk. Much better with BufferGeometry.
                         scene.remove(mesh);
                         mesh.geometry.dispose()
                         mesh.geometry = context.offgeom.clone()
@@ -1347,56 +1378,64 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                         context.updatecolors();
                         geometry.verticesNeedUpdate = true;
                         geometry.elementsNeedUpdate = true;
+                        geometry.uvsNeedUpdate = true;
                         geometry.normalsNeedUpdate = true;
                         geometry.colorsNeedUpdate = true;
-                        geometry.uvsNeedUpdate = true;
+                        //geometry.groupsNeedUpdate = true;
                     }
                 }
             } else {
                 // Old-style polyhedron. Should merge with OFF-style display
                 // Make sure we have the right color setting in material
                 // We should only do this when material properties actually change
-                context.material.vertexColors = context.colortype();
+                //context.material.vertexColors = context.colortype();
                 var points = context.tours[context.tournum%context.tours.length];
                 var tripoint = context.interpolatepoint(context.stopwatch.getTime(), points);
 
+                if (!context.vertices) context.vertices = [];
+                if (!context.faces) context.faces = [];
                 context.drawcompound(function (init) {
                     if (init) context.setup(tripoint); // Make basic polyhedron
                     context.drawpolyhedron();
                 });
-                // Prepare for rendering...
-                console.assert(geometry.faces.length === geometry.faceVertexUvs[0].length);
-
-                // Looks like we need to clone if the number of vertices
-                // or faces has changed.
-                if (geometry.vertices.length != context.npoints ||
-                    geometry.faces.length != context.nfaces) {
-                    context.needclone = true;
-                    geometry.vertices.length = context.npoints;
-                    geometry.faces.length = context.nfaces;
-                    geometry.faceVertexUvs[0].length = context.nfaces;
+                var needuvs = context.texturefile;
+                var vertexarray = new Float32Array(context.nfaces*3*3);
+                var colorarray = new Float32Array(context.nfaces*3*4);
+                var normalarray = new Float32Array(context.nfaces*3*3);
+                if (needuvs) var uvarray = new Float32Array(context.nfaces*3*2);
+                for (var i = 0; i < context.nfaces; i++) {
+                    var face = context.faces[i];
+                    for (var j = 0; j < 3; j++) {
+                        var vertex = context.vertices[face.vlist[j]];
+                        vertexarray[i*3*3+j*3+0] = vertex.x;
+                        vertexarray[i*3*3+j*3+1] = vertex.y;
+                        vertexarray[i*3*3+j*3+2] = vertex.z;
+                        var color = face.colors[j];
+                        colorarray[i*3*4+j*4+0] = color.r;
+                        colorarray[i*3*4+j*4+1] = color.g;
+                        colorarray[i*3*4+j*4+2] = color.b;
+                        colorarray[i*3*4+j*4+3] = color.a;
+                        if (needuvs) {
+                            var uvs = face.uvs[j];
+                            uvarray[i*3*2+j*2+0] = uvs.x;
+                            uvarray[i*3*2+j*2+1] = uvs.y;
+                        }
+                    }
                 }
-                geometry.computeFaceNormals();
-                geometry.verticesNeedUpdate = true;
-                geometry.elementsNeedUpdate = true;
-                geometry.normalsNeedUpdate = true;
-                geometry.colorsNeedUpdate = true;
-                geometry.uvsNeedUpdate = true;
-                if (context.needclone) {
-                    context.needclone = false;
-                    //console.log("Cloning geometry: " + context.npoints + " " + context.nfaces);
-                    // This is rather horrible, but I haven't found a more economical
-                    // way of doing this with the three.js version I'm using (and it's all
-                    // changed (for the better I'm sure) in more recent versions).
-                    // We don't do this every frame at least.
-                    var newgeometry = geometry.clone()
-                    scene.remove(mesh);
-                    geometry.dispose();
-                    geometry = newgeometry;
-                    // Reusing the mesh object seems OK
-                    mesh.geometry = geometry; 
-                    scene.add(mesh);
-                }
+                //console.log("Refreshing geometry",geometry.uuid);
+                // We should look at reusing the buffers, but this seems not too bad.
+                // First call dispose() to make sure we don't leak any buffers.
+                // This uses the current attributes to determine which buffers to
+                // delete so don't eg. try calling removeAttribute on anything.
+                geometry.dispose();
+                // Now we can add in our newly calculated attribute vectors.
+                geometry.addAttribute('position', new THREE.BufferAttribute(vertexarray,3));
+                geometry.addAttribute('color', new THREE.BufferAttribute(colorarray,4));
+                geometry.addAttribute('normal', new THREE.BufferAttribute(normalarray,3));
+                if (needuvs) geometry.addAttribute('uv', new THREE.BufferAttribute(uvarray,2));
+                // This actually computes the face normals since we have separate
+                // vertexes for each face.
+                geometry.computeVertexNormals();
             }
             // Display model normals
             // Remove old edges unless we want a persistence of vision effect.
@@ -1405,7 +1444,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
                 context.normalshelper.geometry.dispose();
             }
             if (context.shownormals) {
-                context.normalshelper = new THREE.FaceNormalsHelper(mesh, 2, 0x00ff00, 1);
+                context.normalshelper = new THREE.VertexNormalsHelper(mesh, 2, 0x00ff00, 1);
                 scene.add(context.normalshelper);
             }
         }

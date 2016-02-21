@@ -34,7 +34,7 @@ THE SOFTWARE.
       <script src="js/OFFLoader.js"></script> 
       <script src="js/geometry.js"></script> 
       <script src="js/poly.js"></script>
-      <canvas id="canvas1" height="400" width="400"></canvas>
+      <canvas id="canvas1" height="400" width="400"></canvas> 
       <canvas id="canvas2" height="400" width="400"></canvas>
       <canvas id="canvas3" height="400" width="400"></canvas>
       <canvas id="canvas4" height="400" width="400"></canvas>
@@ -193,7 +193,8 @@ THE SOFTWARE.
     <h3>Miscellaneous</h3>
     <ul>
       <li><a href="poly.html?off=off/80cell.off&z=10&allvertices&rotate">Into the 4th dimension</a>: an <a href="https://en.wikipedia.org/wiki/Runcinated_tesseracts#Omnitruncated_tesseract">Omnitruncated Tesseract</a>. A 80-cell uniform polychoron, one vertex for each region of the hyperoctahedral group.</li>
-      <li><a href="poly.html?function=hyper&allvertices&edgewidth=0.05&vertexwidth=0.1&off.C=2.4&z=18&rotate">4-d test</a></li>
+      <li><a href="poly.html?function=hyper&allvertices&edgewidth=0.05&vertexwidth=0.1&off.C=2.4&z=18&rotate">4-d test</a> A more dynamic version of the previous. '9' and '0' zooms in and out (hither and yon?) in 4-space; &lt;space&gt; toggles rotation in 4-space - it's a bit jerky, the geometry is recalculated too often.</li>
+      <li><a href="poly.html?function=zoomer&z=0.2&run">Infinite Descent</a> An experiment in zooming in.</li>
       <li>A <a href="poly.html?function=zonohedron&off=off/icosid.off&off.k=1&z=1000&rotate">zonohedron</a>:
       a vast and fascinating area of polyhedral
       studies. Here we see the zonohedrification of the
@@ -265,8 +266,7 @@ THE SOFTWARE.
     <h2>References</h2>
     <ul>
     <li><a href="http://en.wikipedia.org/wiki/List_of_uniform_polyhedra_by_Schwarz_triangle">Uniform Polyhedra</a></li>
-    <li><a href="http://en.wikipedia.org/wiki/Uniform_polyhedron_compound">Uniform
-        Compounds</a></li>
+    <li><a href="http://en.wikipedia.org/wiki/Uniform_polyhedron_compound">Uniform Compounds</a></li>
     </ul>
     <h2>Mouse Controls</h2>
     <p>
@@ -319,14 +319,18 @@ THE SOFTWARE.
       <li>17/1/15: Bugfix: don't try and handle control characters</li>
       <li>17/1/15: Bugfix: Trilinear coordinates had second & third
         values swapped</li>
-      <li>24/1/15: Added polygon example
-      <li>24/1/15: Added cube truncation example
-      <li>24/1/15: Better tours
-      <li>24/1/15: Zonohedra beta
-      <li>27/1/15: Bugfix: draw retroflex edges properly
-      <li>30/1/15: Tidied up interfaces to off functions
-      <li>31/1/15: Added zonohedron example
-      <li>16/2/15: Added 80-cell.
+      <li>24/1/15: Added polygon example</li>
+      <li>24/1/15: Added cube truncation example</li>
+      <li>24/1/15: Better tours</li>
+      <li>24/1/15: Zonohedra beta</li>
+      <li>27/1/15: Bugfix: draw retroflex edges properly</li>
+      <li>30/1/15: Tidied up interfaces to off functions</li>
+      <li>31/1/15: Added zonohedron example</li>
+      <li>16/2/15: Added 80-cell.</li>
+      <li>21/2/15: Update to THREE.js r74.</li>
+      <li>21/2/15: BufferGeometry for polyhedra.</li>
+      <li>21/2/15: Added dynamic 80-cell example.</li>
+      <li>21/2/15: Added zoomer.</li>
     </ul>
 </body> 
 </html>

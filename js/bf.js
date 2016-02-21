@@ -411,7 +411,11 @@ PolyContext.prototype.polygon = function(off,options) {
             addface([origin,p0,p1],Color.white)
         }
     }
-    return { vertices: vertices, faces: faces }
+    // There seems to be a problem in r74 where the indexed
+    // elements don't get updated properly. Should move to
+    // BufferGeometry, but in the meantime, force a clone
+    // each time.
+    return { vertices: vertices, faces: faces, needclone: true }
 }
 
 PolyContext.prototype.dipolygonid = function(off,options) {

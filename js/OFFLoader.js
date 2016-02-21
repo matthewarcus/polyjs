@@ -35,7 +35,7 @@ THREE.OFFLoader.prototype = {
     load: function ( url, onLoad, onProgress, onError ) {
 	var scope = this;
 	var loader = new THREE.XHRLoader( scope.manager );
-	loader.setCrossOrigin( this.crossOrigin );
+	//loader.setCrossOrigin( this.crossOrigin ); // Not in r74?
 	loader.load( url, function ( text, other ) {
             var off = scope.parse(text)
             console.assert(off)
