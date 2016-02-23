@@ -148,7 +148,7 @@ THE SOFTWARE.
     Some <a href="http://www.antiprism.com/examples/index.html">Antiprism examples</a>:
     <ul>
       <li><a href="poly.html?off=off/weave2.off&nofaces&noedges&novertices&spline&rotate">A woven polyhedron</a> - a nice opportunity to use THREE.js 3D spline tubes.</li>
-      <li><a href="poly.html?off=off/torus.off&sym=2:2:1&compound&theta=4&noedges&novertices&normal=images/218_norm.jpg&texture=images/218.jpg&z=10&rotate">Two toruses</a></li>
+      <li><a href="poly.html?off=off/torus.off&sym=2:2:1&compound&noedges&novertices&normal=images/218_norm.jpg&texture=images/218.jpg&z=10&rotate&zrotate">Two toruses</a></li>
       <li><a href="poly.html?off=off/basket.off&vertexwidth=0.05&rotate">String art</a></li>
     </ul>
     And a couple from <a href="http://www.interocitors.com/">Roger Kaufman</a>:
@@ -176,11 +176,11 @@ THE SOFTWARE.
     <a href="http://www.sciencedirect.com/science/article/pii/0898122189901600">this
     paper</a>
     <ul>
+      <li><a href="poly.html?off=off/cubo.off&function=dipolygonid&allvertices&alledges&z=4&rotate&run">Classic cuboctahedral jitterbug</a>
       <li><a href="poly.html?off=off/tet.off&function=dipolygonid&allvertices&alledges&rotate&run">Dipolygonid tetrahedron</a>
       <li><a href="poly.html?off=off/ico.off&function=dipolygonid&allvertices&alledges&rotate&run">Dipolygonid icosahedron</a> Verheyen's Vampire, (again)
-      <li><a href="poly.html?off=off/icosid.off&function=dipolygonid&allvertices&alledges&z=4&rotate&run">Classic icosahedral jitterbug</a>
       <li><a href="poly.html?off=off/rh_icosid.off&function=dipolygonid&z=5&allvertices&alledges&rotate&run">Tripolygonid rhombicosidodecahedron</a>?
-        The triangles don't stay the same size, but remarkably, the other faces do, as well as remaining flat.
+        The triangles don't stay the same size, but the other faces do, as well as remaining flat.
       <li><a href="poly.html?off=off/u34.off&function=dipolygonid&alledges&allvertices&rotate&run">U34</a>
       <li><a href="poly.html?off=off/u36.off&function=dipolygonid&alledges&allvertices&rotate&run">U36</a>
       <!-- <li><a href="poly.html?off=off/u37.off&function=dipolygonid&alledges&allvertices&rotate&run">U37</a> -->
@@ -192,8 +192,7 @@ THE SOFTWARE.
     </ul>
     <h3>Miscellaneous</h3>
     <ul>
-      <li><a href="poly.html?off=off/80cell.off&z=10&allvertices&rotate">Into the 4th dimension</a>: an <a href="https://en.wikipedia.org/wiki/Runcinated_tesseracts#Omnitruncated_tesseract">Omnitruncated Tesseract</a>. A 80-cell uniform polychoron, one vertex for each region of the hyperoctahedral group.</li>
-      <li><a href="poly.html?function=hyper&allvertices&edgewidth=0.05&vertexwidth=0.1&off.C=2.4&z=18&rotate">4-d test</a> A more dynamic version of the previous. '9' and '0' zooms in and out (hither and yon?) in 4-space; &lt;space&gt; toggles rotation in 4-space - it's a bit jerky, the geometry is recalculated too often.</li>
+      <li><a href="poly.html?function=hyper&allvertices&edgewidth=0.05&vertexwidth=0.1&off.C=2.4&z=18&rotate">Into the 4th dimension</a>: an <a href="https://en.wikipedia.org/wiki/Runcinated_tesseracts#Omnitruncated_tesseract">Omnitruncated Tesseract</a>. A 80-cell uniform polychoron, one vertex for each region of the hyperoctahedral group. '9' and '0' zooms in and out (hither and yon?) in 4-space; &lt;space&gt; toggles rotation in 4-space.</li>
       <li><a href="poly.html?function=zoomer&z=0.2&run">Infinite Descent</a> An experiment in zooming in.</li>
       <li>A <a href="poly.html?function=zonohedron&off=off/icosid.off&off.k=1&z=1000&rotate">zonohedron</a>:
       a vast and fascinating area of polyhedral
@@ -331,6 +330,7 @@ THE SOFTWARE.
       <li>21/2/15: BufferGeometry for polyhedra.</li>
       <li>21/2/15: Added dynamic 80-cell example.</li>
       <li>21/2/15: Added zoomer.</li>
+      <li>23/2/15: BufferGeometry for OFF geometries</li>
     </ul>
 </body> 
 </html>
