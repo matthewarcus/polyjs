@@ -531,7 +531,7 @@ PolyContext.prototype.drawpoint = function(p,offset,facefact) {
 PolyContext.prototype.drawtriangle = function(p,q,r,uvs,offset,type,i,n) {
     var Vector = Geometry.Vector;
     if (n == 0) {
-        var facefact = (this.compound+type)*0.0001 // Reduce z-fighting
+        var facefact = (this.compound/*+type*/)*0.0001 // Reduce z-fighting
         var index0 = this.drawpoint(p,offset,facefact);
         var index1 = this.drawpoint(q,offset,facefact);
         var index2 = this.drawpoint(r,offset,facefact);
