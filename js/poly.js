@@ -1046,7 +1046,7 @@ PolyContext.prototype.updategeometry = function(geometry,computenormals,colorsty
     if (computenormals) geometry.computeVertexNormals();
 }
 
-PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
+PolyContext.prototype.runOnCanvas = function(canvas,width,height,mainwindow) {
     var Vector = Geometry.Vector;
     var PointSet = Geometry.PointSet;
     var context = this; // For benefit of subfunctions
@@ -1168,12 +1168,14 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
 
     this.renderscene = function() { context.renderer.render(scene, context.camera); }
 
-    var controls = new THREE.OrbitControls( this.camera, canvas );
-    var oldupdate = controls.update;
-    controls.update = function () {
-        oldupdate.call(controls);
-        context.update(PolyContext.UpdateView);
-        //console.log(context.camera.position);
+    if (mainwindow) {
+        var controls = new THREE.OrbitControls( this.camera, canvas );
+        var oldupdate = controls.update;
+        controls.update = function () {
+            oldupdate.call(controls);
+            context.update(PolyContext.UpdateView);
+            //console.log(context.camera.position);
+        }
     }
 
     if (context.offfile || context.fnames.length > 0) {
@@ -1319,17 +1321,6 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height) {
             }
         }
     }
-
-    // TBD: Defining a window event handler here seems wrong
-    window.addEventListener("keypress",
-                            function (event) {
-                                if (!event.ctrlKey) {
-                                    // Ignore event if control key pressed.
-                                    var handled = context.handleKey(String.fromCharCode(event.charCode));
-                                    if (handled) event.preventDefault();
-                                }
-                            },
-                            false);
 
     this.drawpoint0 = function (x,y,z) {
         if (this.npoints == this.vertices.length) {
@@ -1499,5 +1490,14 @@ PolyContext.runOnWindow = function(canvas) {
             context.update(PolyContext.UpdateModel);
         }
     });
-    context.runOnCanvas(canvas,width,height);
+    window.addEventListener("keypress",
+                            function (event) {
+                                if (!event.ctrlKey) {
+                                    // Ignore event if control key pressed.
+                                    var handled = context.handleKey(String.fromCharCode(event.charCode));
+                                    if (handled) event.preventDefault();
+                                }
+                            },
+                            false);
+    context.runOnCanvas(canvas,width,height,true);
 }
