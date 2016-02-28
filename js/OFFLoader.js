@@ -123,6 +123,17 @@
             t.normalize()
             return t
         },
+        // Quaternion multiplication: r = pq.
+        // r may be the same as p or q or both.
+        qmul: function(p,q,r) {
+            var p0 = p.x, p1 = p.y, p2 = p.z, p3 = p.w;
+            var q0 = q.x, q1 = q.y, q2 = q.z, q3 = q.w;
+            var r0 = p0*q0 - p1*q1 - p2*q2 - p3*q3;
+            var r1 = p0*q1 + p2*q3 - p3*q2 + p1*q0;
+            var r2 = p0*q2 + p3*q1 - p1*q3 + p2*q0;
+            var r3 = p0*q3 + p1*q2 - p2*q1 + p3*q0;
+            r.x = r0; r.y = r1; r.z = r2; r.w = r3;
+        },
         interp: function (v0,v1,theta) {
             var v = vmul(v0,theta);
             v.add(vmul(v1,1-theta));

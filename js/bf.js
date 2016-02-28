@@ -217,12 +217,15 @@ PolyContext.prototype.desargues = function(off,options) {
 }
 
 PolyContext.prototype.theorem = function(off,options) {
-    var vector = THREE.OFFLoader.Utils.vector
-    var vadd = THREE.OFFLoader.Utils.vadd
-    var vdiv = THREE.OFFLoader.Utils.vdiv
+    var vector = THREE.OFFLoader.Utils.vector;
+    var vadd = THREE.OFFLoader.Utils.vadd;
+    var vsub = THREE.OFFLoader.Utils.vsub;
+    var vdiv = THREE.OFFLoader.Utils.vdiv;
+    var qmul = THREE.OFFLoader.Utils.qmul;
     var Color = THREE.OFFLoader.Utils.Color;
     var cos = Math.cos
     var sin = Math.sin
+    var tan = Math.tan
    
     var vertices = []
     var faces = []
@@ -235,23 +238,50 @@ PolyContext.prototype.theorem = function(off,options) {
     function addface(vlist,color) {
         faces.push({ vlist: vlist, color: color });
     }
-    function bisect(v0,v1,color) {
-        return addvertex(vdiv(vadd(vertices[v0],vertices[v1]),2),color)
+    function bisect(v0,v1) {
+        return vdiv(vadd(v0,v1),2);
     }
-    if (options.theta === undefined) options.theta = 0
-    var theta = options.theta
-    options.theta += 0.02
-    var pi = 3.14159;
-    var A = addvertex(vector(1,-0.5,1), Color.green)
-    var B = addvertex(vector(-0.5, 0, -0.5), Color.green)
-    var C = addvertex(vector(-1, -0.5, 1), Color.green)
-    var D = addvertex(vector(sin(theta),1,-cos(theta)), Color.green)
+    // Construct a tetrahedron in 4-space
+    var AQ = new THREE.Vector4(1,0,0,0);
+    var BQ = new THREE.Vector4(0,1,0,0);
+    var CQ = new THREE.Vector4(0,0,1,0);
+    var DQ = new THREE.Vector4(0,0,0,1);
+    // Apply a quaternion for a Clifford rotation
+    if (!options.quat) {
+        options.quat = new THREE.Vector4(1,0,-0.618,1);
+        options.quat.normalize();
+        options.quinc = new THREE.Vector4(1,0,0.01,0);
+        options.quinc.normalize();
+    }
+    var quat = options.quat;
+    var quinc = options.quinc;
+    qmul(AQ,quat,AQ);
+    qmul(BQ,quat,BQ);
+    qmul(CQ,quat,CQ);
+    qmul(DQ,quat,DQ);
+    qmul(quat,quinc,quat);
+    // And project into 3-space in the usual way.
+    var A = vector(AQ.x,AQ.y,AQ.z);
+    var B = vector(BQ.x,BQ.y,BQ.z);
+    var C = vector(CQ.x,CQ.y,CQ.z);
+    var D = vector(DQ.x,DQ.y,DQ.z);
 
-    var E = bisect(A,C,Color.yellow)
-    var F = bisect(C,B,Color.yellow)
-    var G = bisect(A,D,Color.yellow)
-    var H = bisect(D,B,Color.yellow)
-    var I = bisect(G,F,Color.red)
+    var E = bisect(A,C);
+    var F = bisect(C,B);
+    var G = bisect(A,D);
+    var H = bisect(D,B);
+    var I = bisect(G,F);
+    // Now convert to indices (the joys of dynamic typing!)
+    // Subtract I from everything to keep the centre at the centre.
+    A = addvertex(vsub(A,I),Color.green);
+    B = addvertex(vsub(B,I),Color.green);
+    C = addvertex(vsub(C,I),Color.green);
+    D = addvertex(vsub(D,I),Color.green);
+    E = addvertex(vsub(E,I),Color.yellow);
+    F = addvertex(vsub(F,I),Color.yellow);
+    G = addvertex(vsub(G,I),Color.yellow);
+    H = addvertex(vsub(H,I),Color.yellow);
+    I = addvertex(vsub(I,I),Color.red);
 
     var edges = [
         [A,B],[B,C],[C,A],[A,D],[B,D],
