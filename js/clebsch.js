@@ -22,7 +22,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// Construct a representation of the Clebsch surface as a THREE.js particle system.
+// Construct a representation of the Clebsch surface as a Three.js Points object
 // The surface is stored as a set of homogeneous coordinates, for display we
 // multiply by a varying quaternion to perform an isoclinic rotation in
 // projective space (before doing the usual projection to 3-space).
