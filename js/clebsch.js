@@ -182,22 +182,16 @@ var Clebsch = {};
         }, false);
         
         var scene = new THREE.Scene();
-        var material = new THREE.PointsMaterial;
-        material.size = 0.05;
-        material.vertexColors = true;
+        var material = new THREE.PointsMaterial({
+            size: 0.1,
+            vertexColors: true,
+            map: THREE.ImageUtils.loadTexture("images/ball.png"),
+            alphaTest: 0.5, // Clip to texture
+        });
         var geometry = new THREE.BufferGeometry();
         geometry.dynamic = true;
         scene.add(new THREE.Points(geometry,material));
         
-        var light = new THREE.DirectionalLight(0xffffff, 0.8);
-        light.position.set(0,1,1);
-        scene.add(light);
-        var light = new THREE.DirectionalLight(0xffffff, 0.5);
-        light.position.set(0,-1,0);
-        scene.add(light);
-        var light = new THREE.AmbientLight(0x404040); // soft white light
-        scene.add(light);
-
         var params = { canvas: canvas, antialias: true };
         var width = window.innerWidth;
         var height = window.innerHeight;
@@ -210,12 +204,21 @@ var Clebsch = {};
 
         var controls = new THREE.OrbitControls( camera, canvas );
 
+        // Don't need lights for a Points object...
+        
+        var stats; // = new Stats();
+        if (stats) {
+	    stats.domElement.style.position = 'absolute';
+	    stats.domElement.style.top = '0px';
+	    canvas.parentNode.appendChild(stats.domElement);
+        }
+
         // A quaternion represents an (isoclinic) rotation in
         // 4-space - effectively changing the 'plane at infinity'.
-        // Start with identity.
+        // Start with identity,
         var quat = new THREE.Vector4(1,0,0,0);
         quat.normalize();
-        // And rotate the quaternion each time around the loop
+        // and rotate the quaternion each time around the loop
         // by multiplication with quinc.
         var quinc = new THREE.Vector4(1,0,0.01,0);
         quinc.normalize();
@@ -262,6 +265,7 @@ var Clebsch = {};
             setvertices();
             if (running) qmul(quat,quinc,quat);
             renderer.render(scene, camera);
+            if (stats) stats.update();
         }
         requestAnimationFrame(dorender);
     }
