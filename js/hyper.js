@@ -52,8 +52,8 @@
 
     var quat1 = Vector.normalize([1,0,0,0]);
     var quat2 = Vector.normalize([1,0,0,0]);
-    var dquat2 = Vector.normalize([1,0.0,0,0.0]);
-    var dquat1 = Vector.normalize([1,0.01,0,0.0]);
+    var dquat2 = Vector.normalize([1,0,0,0]);
+    var dquat1 = Vector.normalize([1,0.01,0,0]);
 
     //console.log("#",quat1,quat2,Vector.dot(quat1,quat2));
 
@@ -254,7 +254,7 @@
         // of other things named after him (deservedly so of course) whereas
         // Dynkin doesn't seem to have much else [this is totally
         // untrue, Dynkin is a figure of some interest - see
-        // Wikipedia), it should be the first vertex of the region,
+        // Wikipedia], it should be the first vertex of the region,
         // anyway (the ringed node in the diagram).
         //makeoff(vertices,hypercube);
         
@@ -279,8 +279,6 @@
         if (verbose) {
             console.log("C", vprint(C));
             console.log("Check", vprint([dot(C,P),dot(C,Q),dot(C,R),dot(C,S)]));
-            //console.log(vprint(M));
-            //console.log(vprint(N));
             console.log("bary",vprint(bary));
             console.log(vprint(Geometry.apply4(M,bary)));
             console.log(applybary4(bary,p,q,r,s));
@@ -292,6 +290,7 @@
                               vertices[region[2]],
                               vertices[region[3]]);
         });
+        // Check each region has a unique point
         if (0) {
             for (var i = 0; i < regionpoints.length; i++) {
                 for (var j = i+1; j < regionpoints.length; j++) {
@@ -394,7 +393,7 @@
         var dot = Vector.dot
         var planes = solveangles(angles,verbose);
         var P = planes[0], Q = planes[1], R = planes[2], S = planes[3];
-        // Now solve the trilinear (tetralinear) equations, eg:
+        // Now solve the trilinear (quadriplanar) equations, eg:
         // P.p = a
         // Q.p = b
         // R.p = c
@@ -463,8 +462,8 @@
         //console.log(options.C);
         var angles = [4,3,2,3,2,2];
         //var angles = [2,2,5,2,2,7];
-        //var angles = [2,3,5,2,2,2]
-        //var quad = [1,0,0,1];
+        //var angles = [5,2,3,2,2,2]
+        //var quad = [0,0,1,0];
         var quad = [1,1,1,1];
         var camera = options.C;
         if (running) {

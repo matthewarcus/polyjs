@@ -149,14 +149,27 @@ PolyContext.prototype.desargues = function(off,options) {
     var vdiv = THREE.OFFLoader.Utils.vdiv
     var vmul = THREE.OFFLoader.Utils.vmul
     var vdot = THREE.OFFLoader.Utils.vdot
+    var qmul = THREE.OFFLoader.Utils.qmul
     var vcross = THREE.OFFLoader.Utils.vcross
     var vnormalize = THREE.OFFLoader.Utils.vnormalize
     var Color = THREE.OFFLoader.Utils.Color;
     var vertices = []
     var faces = []
+    // Apply a quaternion for a Clifford rotation
+    if (!options.quat) {
+        options.quat = new THREE.Vector4(1,0,0,0);
+        options.quat.normalize();
+        options.quinc = new THREE.Vector4(1,0.002,0.01,0.005);
+        options.quinc.normalize();
+    }
+    var quat = options.quat;
+    var quinc = options.quinc;
+    qmul(quat,quinc,quat);
     function addvertex(v,color) {
         var i = vertices.length
-        vertices.push(v);
+        var qv = new THREE.Vector4(v.x,v.y,v.z,0)
+        qmul(quat,qv,qv);
+        vertices.push(qv);
         if (color) faces.push({ vlist: [i], color: color })
         return i
     }
@@ -165,8 +178,10 @@ PolyContext.prototype.desargues = function(off,options) {
     }
     function addline(p,q,r) {
         addface([p,q],Color.white)
-        addface([q,r],Color.white)
-        addface([r,p],Color.white)
+        if (r) {
+            addface([q,r],Color.white)
+            addface([r,p],Color.white)
+        }
     }
     function intersect(p0,p1,q0,q1) {
         var n = vsub(p1,p0)
@@ -181,6 +196,40 @@ PolyContext.prototype.desargues = function(off,options) {
         var k = vdot(t1,t2)/vdot(t1,t1)
         return vadd(p0,vmul(n,k))
     }
+    var a = vector(0,-1,-1);
+    var b = vector(-1,-1,-1);
+    var c = vector(0,-1,0);
+    var d = vector(0,1,-1);
+    var e = vector(0,0,-1);
+    var f = vector(1,-1,-1);
+    var g = vector(0,-1,1);
+    var h = intersect(e,f,b,d);
+    var i = intersect(b,c,f,g);
+    var j = intersect(g,e,c,d);
+    var A = addvertex(a,Color.red);
+    var B = addvertex(b,Color.blue);
+    var C = addvertex(c,Color.blue);
+    var D = addvertex(d,Color.blue);
+    var E = addvertex(e,Color.green);
+    var F = addvertex(f,Color.green);
+    var G = addvertex(g,Color.green);
+    var H = addvertex(h,Color.yellow);
+    var I = addvertex(i,Color.yellow);
+    var J = addvertex(j,Color.yellow);
+    addline(A,D)
+    addline(A,G)
+    addline(B,D)
+
+    addline(B,F)
+    addline(B,I)
+    addline(C,D)
+
+    addline(E,G)
+    addline(F,H)
+    addline(F,G)
+
+    addline(H,I)
+    /*
     var a0 = vector(-2,0,-2)
     var b0 = vector(0,-1,-2)
     var c0 = vector(-2,-2,-2)
@@ -213,6 +262,7 @@ PolyContext.prototype.desargues = function(off,options) {
     addline(C0,A0,F)
     addline(C1,A1,F)
     addline(D,E,F)
+*/
     return { vertices: vertices, faces: faces }
 }
 
@@ -562,14 +612,24 @@ PolyContext.prototype.hoberman = function(off,options) {
 }
 
 PolyContext.prototype.invert = function (off, options) {
-    if (!off) return;
-    // Invert in unit sphere
+    var vector = THREE.OFFLoader.Utils.vector
     var vdot = THREE.OFFLoader.Utils.vdot
+    var vadd = THREE.OFFLoader.Utils.vadd
+    var vsub = THREE.OFFLoader.Utils.vsub
+    var vdiv = THREE.OFFLoader.Utils.vdiv
+    if (!off) return;
+    options.t = options.t || 0;
+    var t = options.t;
+    var icentre = vector(0.6*Math.sin(t),0.1*Math.cos(t/3),0);
+    options.t += 0.01;
+    // Invert in unit sphere
+    var newvertices = [];
     for (var i = 0; i < off.vertices.length; i++) {
-        var k = vdot(off.vertices[i],off.vertices[i])
-        off.vertices[i].divideScalar(k)
+        var v = vsub(off.vertices[i],icentre);
+        var k = vdot(v,v)*10;
+        newvertices.push(vadd(icentre,vdiv(v,k)));
     }
-    return off
+    return { vertices: newvertices, faces: off.faces }
 }
 
 PolyContext.prototype.zoomer = (function () {
@@ -659,6 +719,59 @@ PolyContext.prototype.zoomer = (function () {
         return { vertices: vertices, faces: faces }
     }
 })()
+
+PolyContext.prototype.slerp = function(off,options) {
+    var Vector3 = THREE.Vector3
+    var Vector4 = THREE.Vector4
+    var vnegate = THREE.OFFLoader.Utils.vnegate
+    var vadd = THREE.OFFLoader.Utils.vadd
+    var vadd3 = THREE.OFFLoader.Utils.vadd3
+    var vsub = THREE.OFFLoader.Utils.vsub
+    var vdiv = THREE.OFFLoader.Utils.vdiv
+    var vmul = THREE.OFFLoader.Utils.vmul
+    var vdot = THREE.OFFLoader.Utils.vdot
+    var qmul = THREE.OFFLoader.Utils.qmul
+    var vcross = THREE.OFFLoader.Utils.vcross
+    var Color = THREE.OFFLoader.Utils.Color;
+
+    var vertices = []
+    var faces = []
+    // We should rotate q1 with SLERP as well...
+    var q0 = new Vector4(1,0,1,0);
+    var qrot = new Vector4(1,0.01,0.01,-0.01);
+    var q1 = options.q1 || new Vector4(0,2,0.5,1);
+    options.q1 = q1;
+    qmul(q1,qrot,q1);
+    q0.normalize(); q1.normalize();
+    var k = vdot(q0,q1);
+    var q2 = vsub(q1,vmul(q0,vdot(q0,q1)));
+    q2.normalize();
+    //console.log(q1);
+    //console.log(q2);
+    //console.log(dot(q0,q2));
+    //console.log(dot(q1,q2));
+    var s = [ new Vector4(0,1,0,0), new Vector4(0,0,1,0), new Vector4(0,0,0,1) ];
+    var colors = [Color.red,Color.green,Color.blue];
+    var N = 32;
+    for(var i = 0; i < N; i++) {
+        var theta = i*Math.PI/N;
+        var quat = vadd(vmul(q0,Math.cos(theta)),vmul(q2,Math.sin(theta)));
+        var cquat = new Vector4(quat.x,-quat.y,-quat.z,-quat.w);
+        for (var j = 0; j < s.length; j++) {
+            var t = new Vector3();
+            qmul(s[j],quat,t);
+            qmul(cquat,t,t); // Omit this for a nice single-sided isoclinic rotation.
+            console.assert(Math.abs(t.x) < 1e-5);
+            vertices.push(new Vector3(t.y,t.z,t.w));
+        }
+        var base = i * s.length
+        for (var j = 0; j < s.length; j++) {
+            faces.push({ vlist: [base+j], color: colors[j] });
+            faces.push({ vlist: [base+j,base+(j+1)%s.length] });
+        }
+    }
+    return { vertices: vertices, faces: faces }
+}
 
 //eqtest()
 // function doit() {

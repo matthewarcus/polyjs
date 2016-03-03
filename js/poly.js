@@ -606,8 +606,9 @@ PolyContext.prototype.drawface = function(centre,plist,facetype,index,tridepth,p
 
             // Compute uvs for face points
             for (var i = 0; i < plist.length; i++) {
-                var u = 0.5 + Vector.dot(Vector.sub(plist[i],centre),uaxis);
-                var v = 0.5 + Vector.dot(Vector.sub(plist[i],centre),vaxis);
+                var p = plist[i]
+                var u = 0.5 + Vector.dot(Vector.sub(p,centre),uaxis);
+                var v = 0.5 + Vector.dot(Vector.sub(p,centre),vaxis);
                 faceuvs.push(new THREE.Vector2(u,v));
             }
             var uvcentre = new THREE.Vector2(0.5,0.5);
@@ -1063,10 +1064,9 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height,mainwindow) {
 
     // Set up the scene
     var material = new THREE.MeshPhongMaterial;
-    //material.color = 0xffffff;
     material.side = THREE.DoubleSide;
-    //material.side = THREE.FrontSide;
     material.vertexColors = THREE.FaceColors;
+    //material.shininess = 0;
     context.material = material;
 
     if (context.texturefile) {

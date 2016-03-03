@@ -109,7 +109,7 @@ THE SOFTWARE.
       <li><a href="poly.html?args=3:5/3:2&sym=3:2:4&colorstyle=1&t=7&rotate&run">[3 5/3 2]</a></li>
       <li><a href="poly.html?args=3:5/3:5/2&sym=3:2:4&colorstyle=7&snub&t=7&rotate&texture=images/202.jpg">[3 5/3 5/2]</a> U69 looks good in granite</li>
       <li><a href="poly.html?args=5/2:3/2:3/2&sym=2:3:3&t=7&snub&colorstyle=1&rotate">U72</a> A particularly fine snub figure</li>
-      <li><a href="poly.html?args=2:3:5&colorstyle=1&hide=4&tri=1:0:0&tri=0:1:1&snub&rotate&run">Jitterbug
+      <li><a href="poly.html?args=2:3:4&colorstyle=1&hide=4&tri=1:0:0&tri=0:1:1&snub&rotate&run">Jitterbug
       transformation</a> Another polyhedral transformations that
       corresponds to a particular route through a Schwarz triangle
       (snub this time) - here the triangle is [2 x x] and the route is
@@ -192,9 +192,9 @@ THE SOFTWARE.
     </ul>
     <h3>Miscellaneous</h3>
     <ul>
-      <li><a href="clebsch.html">The Clebsch Surface</a> Animated cubic surface. &lt;Space&gt; is start/stop, usual Orbit controls.
-      <li><a href="poly.html?function=hyper&allvertices&edgewidth=0.05&vertexwidth=0.1&off.C=2.4&z=18&rotate">Into the 4th dimension</a>: an <a href="https://en.wikipedia.org/wiki/Runcinated_tesseracts#Omnitruncated_tesseract">Omnitruncated Tesseract</a>. A 80-cell uniform polychoron, one vertex for each region of the hyperoctahedral group. '9' and '0' zooms in and out (hither and yon?) in 4-space; &lt;space&gt; toggles rotation in 4-space.</li>
-      <li><a href="poly.html?function=zoomer&z=0.2&run">Infinite Descent</a> An experiment in zooming in.</li>
+      <li><a href="clebsch.html">The Clebsch Surface</a> Animated cubic surface. &lt;Space&gt; is start/stop, usual Orbit controls. Find the lines.
+      <li><a href="poly.html?function=hyper&allvertices&edgewidth=0.05&vertexwidth=0.1&off.C=2.4&z=18&rotate&run">Into the 4th dimension</a>: an <a href="https://en.wikipedia.org/wiki/Runcinated_tesseracts#Omnitruncated_tesseract">Omnitruncated Tesseract</a>. A 80-cell uniform polychoron, with a vertex for each of the 384 elements of the hyperoctahedral group. '9' and '0' zooms in and out (hither and yon?) in 4-space; &lt;space&gt; toggles rotation in 4-space. See code for the Wythoff construction in 4 dimensions.</li>
+      <li><a href="poly.html?function=zoomer&z=0.2&run">Infinite Descent</a> An experiment in zooming in. Zooming out reveals the truth.</li>
       <li>A <a href="poly.html?function=zonohedron&off=off/icosid.off&off.k=1&z=1000&rotate">zonohedron</a>:
       a vast and fascinating area of polyhedral
       studies. Here we see the zonohedrification of the
@@ -223,6 +223,8 @@ THE SOFTWARE.
         are coincident. The yellow vertices clearly form a parallelogram.
         The tetrahedron is constructed in 4-space, rotated with a quaternion & projected into
         3-space in the usual way.
+        <li><a href="poly.html?function=desargues&vertexstyle=icosahedron&z=4&run">Desargues Theorem</a> Constructed from two congruent tetrahedra, then rotated in 4-space.
+        <li><a href="poly.html?function=slerp&vertexstyle=icosahedron&run">SLERP</a> A triangle rotated 360 degrees in 32 steps with a SLERPed quaternion, with the quaternion itself changing over time. Note that one triangle and one vertex of each color never move.
     </ul>
     <h3>Uniform Compounds</h3>
     Instead of using a set of Schwarz triangles to draw a polyhedron,

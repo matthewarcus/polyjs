@@ -53,7 +53,7 @@
 
     THREE.OFFLoader.defaultoptions = function () {
         return {
-            vertexstyle: "sphere",
+            vertexstyle: "icosahedron",
             vertexwidth: 0.06,
             edgewidth: 0.02,
             alledges: false,
@@ -311,7 +311,9 @@
             face1.vlist[2] = face2.c + vertexOffset;
 
             console.assert(face2VertexNormals.length == 0 || face2VertexNormals.length == 3)
-            if (face2VertexNormals.length == 0) {
+            // If we have both a face normal and vertex normals, which to choose?
+            // Probably should be an options, but for now, choose vertex normals.
+            if (/*face2.normal ||*/ face2VertexNormals.length == 0) {
                 face1.normals[0].copy(face2.normal);
                 if ( normalMatrix !== undefined ) {
                     face1.normals[0].applyMatrix3( normalMatrix ).normalize();
@@ -425,11 +427,13 @@
             if (!vertexmodel) {
                 if (vertexstyle === "cylinder") {
                     vertexmodel = new THREE.CylinderGeometry( vertexwidth, vertexwidth, vertexwidth );
-                } else if (vertexstyle === "icosahedron") {
-                    vertexmodel = new THREE.IcosahedronGeometry( vertexwidth, 2 );
-                } else {
-                    if (vertexstyle !== "sphere") alert("Unknown vertexstyle: " + vertexstyle);
+                } else if (vertexstyle === "sphere") {
                     vertexmodel = new THREE.SphereGeometry( vertexwidth );
+                } else {
+                    if (vertexstyle !== "icosahedron") {
+                        console.log("Unknown vertexstyle: " + vertexstyle);
+                    }
+                    vertexmodel = new THREE.IcosahedronGeometry( vertexwidth, 1 );
                 }
             }
             m.identity();

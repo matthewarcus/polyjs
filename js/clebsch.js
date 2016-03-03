@@ -55,13 +55,13 @@
 
 // All that remains is to project into 3-space - as usual we divide by the w-coordinate,
 // but to get different projections, before doing this we rotate in projective space
-// by multiplying by a quaternion & varying the quaternion varies the projection.
+// by multiplying by a quaternion & then varying the quaternion varies the projection.
 // (Quaternion [d,-a,-b,-c] puts plane [a,b,c,d] at infinity - alternatively, rotates
 // [a,b,c,d] to [0,0,0,1] - it's well known that quaternions can be used to represent
 // rotations in 3-space, but they also work for 4-space (with 3-space as a special
 // case) - a 4-space rotation is uniquely represented (up to sign) by x -> pxq where p
 // and q are unit quaternions (representing 'isoclinic' or 'Clifford' rotations -
-// rotations by the same amount about different planes, giving a twisty-turny effect).
+// rotations by the same amount about different planes, giving a twisty-turny effect)).
 
 // The Clebsch surface of course is famous for its 27 lines, these are visible
 // in our animation, though some may be hiding in the plane at infinity or not have
@@ -115,11 +115,12 @@ var Clebsch = {};
     function solve(x,y) {
         // Find solutions for (x,y,z,w) with w = 1
         // and (x+y+z+w)^3 == x^3+y^3+z^3+w^3
-        // There are solutions for w = 0 but they
-        // aren't very interesting & we ignore them.
+        // Solutions for w = 0 form some of the famous 27 lines
+        // we ignore them as otherwise they dominate the image
+        // (the lines are visible anyway).
         var w = 1;
-        var A = x+y+1;
-        var B = x*x*x + y*y*y + 1;
+        var A = x+y+w;
+        var B = x*x*x + y*y*y + w;
         // if A is very small, z0 and z1 are very large;
         if (Math.abs(A) < 1e-5) return;
         var a = 3*A;
@@ -249,8 +250,15 @@ var Clebsch = {};
             for (var i = 0; i < npoints; i++) {
                 qmul(quat,points[i],qtmp);
                 var x = qtmp.x, y = qtmp.y, z = qtmp.z, w = qtmp.w;
+                var eps = 1e-5;
                 // w might be 0, but apart from making bounding box
                 // calculations difficult, nothing too awful seems to happen.
+                // All the same, clamp to a small non-zero value.
+                if (w >= 0) {
+                    if (w < eps) w = eps;
+                } else {
+                    if (w > -eps) w = -eps;
+                }
                 x /= w; y /= w; z /= w;
                 vertexarray[3*i+0] = x;
                 vertexarray[3*i+1] = y;
