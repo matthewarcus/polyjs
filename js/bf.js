@@ -737,17 +737,17 @@ PolyContext.prototype.slerp = function(off,options) {
     var vertices = []
     var faces = []
     // We should rotate q1 with SLERP as well...
-    var q0 = new Vector4(0,1,1,0);
-    var qrot = new Vector4(1,0.01,0.01,-0.01);
+    var q0 = new Vector4(1,0.5,1,0);
+    var qrot = new Vector4(1,0.005,0.01,-0.02);
+    q0.normalize(); qrot.normalize();
     var q1 = options.q1;
     if (!q1) {
-        var q1 = new Vector4(Math.sqrt(2)/2,1,0,0);
-        var tmp = new Vector4(1,0,0,1);
-        qmul(tmp,q1,q1);
+        var q1 = new Vector4(0,1,0,1);
+        q1.normalize();
         options.q1 = q1;
     }
     qmul(q1,qrot,q1);
-    q0.normalize(); q1.normalize();
+    console.log(q1);
     var k = vdot(q0,q1);
     var q2 = vsub(q1,vmul(q0,vdot(q0,q1)));
     q2.normalize();
@@ -755,17 +755,30 @@ PolyContext.prototype.slerp = function(off,options) {
     //console.log(q2);
     //console.log(dot(q0,q2));
     //console.log(dot(q1,q2));
-    var s = [ new Vector4(0,1,0,0), new Vector4(0,0,2,0), new Vector4(0,0,0,3) ];
-    var colors = [Color.red,Color.green,Color.blue];
+    var s = [ new Vector4(0,1,1,0), new Vector4(0,1,-1,0), new Vector4(0,-1,-1,0), new Vector4(0,-1,1,0) ];
+    var colors = [Color.red,Color.green,Color.blue,Color.yellow];
     var N = 32;
     // A +iB is rotation by pi/N.
     var A = Math.cos(Math.PI/N), B = Math.sin(Math.PI/N);
     var a = 1; b = 0;
+
+    var vbase = vertices.length;
+    for (var j = 0; j < s.length; j++) {
+        var t = s[j];
+        console.assert(Math.abs(t.x) < 1e-5);
+        vertices.push(new Vector3(t.y,t.z,t.w));
+    }
+    if (0) {
+        for (var j = 0; j < s.length; j++) {
+            faces.push({ vlist: [vbase+j], color: colors[j] });
+            faces.push({ vlist: [vbase+j,vbase+(j+1)%s.length] });
+        }
+    }
     for(var i = 0; i < N; i++) {
         var quat = vadd(vmul(q0,a),vmul(q2,b));
         var cquat = new Vector4(quat.x,-quat.y,-quat.z,-quat.w);
         if (0) {
-            var theta = i*Math.PI/N;
+              var theta = i*Math.PI/N;
             console.assert(Math.abs(a-Math.cos(theta)) < 1e-5);
             console.assert(Math.abs(b-Math.sin(theta)) < 1e-5);
         }
