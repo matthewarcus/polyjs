@@ -747,7 +747,7 @@ PolyContext.prototype.slerp = function(off,options) {
         options.q1 = q1;
     }
     qmul(q1,qrot,q1);
-    console.log(q1);
+    //console.log(q1);
     var k = vdot(q0,q1);
     var q2 = vsub(q1,vmul(q0,vdot(q0,q1)));
     q2.normalize();
