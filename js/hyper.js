@@ -52,22 +52,25 @@
 
     var quat1 = Vector.normalize([1,0,0,0]);
     var quat2 = Vector.normalize([1,0,0,0]);
+    var dquat1 = Vector.normalize([1,0.005,0.005,0.005]);
+    //var dquat2 = Vector.normalize([1,-0.005,-0.005,-0.005]);
     var dquat2 = Vector.normalize([1,0,0,0]);
-    var dquat1 = Vector.normalize([1,0.01,0,0]);
 
     //console.log("#",quat1,quat2,Vector.dot(quat1,quat2));
 
     // Dump set of vertices and edges as an OFF file
     // We do the projection to 3-space here rather than having
-    // 4-points in the off file, but it might be good to do
-    // it that way.
+    // 4-points in the off file, but it might better to do it that way.
     function makeoff(vertices,edges,wcam) {
-        console.assert(wcam > 0);
+        console.assert(wcam >= 0);
+        //console.log(wcam);
+        var doperspective = true;
         var camera = [0,0,0,-wcam]
         var project = function(v) {
-            // Project on to w = 0 from camera at [0,0,0,-wcam], ie.
-            //(camera + k(v-camera)).w = 0
-            var k = wcam/(v[3]+wcam)
+            // Project on to w = 1 from camera at [0,0,0,-wcam], ie.
+            // so from the origin, get the gnomonic projection).
+            // (camera + k(v-camera)).w = 1
+            var k = (1+wcam)/(v[3]+wcam)
             return Vector.add(camera,Vector.mul(Vector.sub(v,camera), k))
         }
         // Handle duplicate vertices, null edges.
@@ -77,7 +80,7 @@
         for (var i = 0; i < vertices.length; i++) {
             vertices[i] = qmul(quat1,qmul(vertices[i],quat2));
             //console.log(vertices[i])
-            if (vertices[i][3] > -0.99*wcam) {
+            if (!doperspective || vertices[i][3] > -wcam) {
                 vertexmap[i] = newvertices.add(vertices[i]);
             }
         }
@@ -133,7 +136,11 @@
             }
         } else {
             var vertices = newvertices.vertices.map(function(v) {
-                var v1 = project(v);
+                if (doperspective) {
+                    var v1 = project(v);
+                } else {
+                    var v1 = v;
+                }
                 return new THREE.Vector3(v1[0],v1[1],v1[2]);
             });
             var faces = newedges.map(function(edge) {
@@ -432,7 +439,7 @@
             console.log("r", vprint(r), vprint([dot(r,P),dot(r,Q),dot(r,R),dot(r,S)]));
             console.log("s", vprint(s), vprint([dot(s,P),dot(s,Q),dot(s,R),dot(s,S)]));
         }
-        var regionpoint = Geometry.apply4(n,quad);
+        var regionpoint = /*Vector.normalize*/(Geometry.apply4(n,quad));
         return close(p,q,r,s,P,Q,R,S,regionpoint,camera);
     }
 
@@ -458,20 +465,70 @@
     }
 
     PolyContext.prototype.hyper = function(off,options,running) {
-        options.C = options.C || 4;
-        //console.log(options.C);
-        var angles = [4,3,2,3,2,2];
-        //var angles = [2,2,5,2,2,7];
-        //var angles = [5,2,3,2,2,2]
-        //var quad = [0,0,1,0];
-        var quad = [1,1,1,1];
-        var camera = options.C;
+        var angles = [];
+        var quad = [];
+        options.w = Number(options.w) || 4;
+        options.angles = options.angles || "4:3:2:3:2:2"
+        options.quad = options.quad || "1:0:0:0"
+        var matches;
+        if (matches = options.angles.match(/^([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?:([\d]+)(?:\/([\d]+))?$/)) {
+            //console.log("Got angles",matches);
+            for (var i = 0; i < 6; i++) {
+                var a = Number(matches[2*i+1]);
+                if (matches[2*i+2]) a /= Number(matches[2*i+2]);
+                angles.push(a);
+            }
+        } else {
+            alert("Invalid off.angles: " + options.angles);
+            return null;
+        }
+        if (matches = options.quad.match(/^([\d]+):([\d]+):([\d]+):([\d]+)$/)) {
+            //console.log("Got quad",matches);
+            for (var i = 0; i < 4; i++) {
+                var a = Number(matches[i+1]);
+                quad.push(a);
+            }
+        } else {
+            alert("Invalid quad: " + options.quad);
+            return null;
+        }
+        //console.log(options.w);
+        //var angles = ;
+        //var angles = [5,3,2,3,2,2];
+        //var angles = [5/2,3,2,3,2,2];
+        //var angles = [3,4,2,3,2,2]
+        //var quad = [1,0,0,0];
+        //var quad = [0,1,1,0];
+        //var quad = [1,0,0,0];
+        var camera = options.w;
         if (running) {
             quat1 = qmul(quat1,dquat1);
             quat2 = qmul(quat2,dquat2);
         }
         return polychoron(angles,quad,camera);
     }
+    PolyContext.prototype.quat = function(off,options,running) {
+        let quat = [2,0,0,0];
+        var dquat1 = Vector.normalize([1,0.2,0.0,0.0]);
+        var dquat2 = Vector.normalize([1,0.0,0.2,0.0]);
+        var dquat3 = Vector.normalize([1,0.0,0.0,0.2]);
+        var dquat4 = Vector.normalize([1,0.2,0.2,0.2]);
+        var vertices = [];
+        var faces = [];
+        var N = 1000;
+        for (var i = 0; i < N; i++) {
+            vertices.push(new THREE.Vector3(quat[1],quat[2],quat[3]));
+            quat = qmul(quat,dquat1);
+            quat = qmul(dquat2,quat);
+            quat = qmul(quat,dquat4);
+            //quat = qmul(dquat4,quat);
+        }
+        for (var i = 0; i < N-1; i++) {
+            faces.push({ vlist: [i,i+1] });
+        }
+        return {vertices: vertices, faces: faces }
+    }
 })()
 
 //module.exports = { solveall: solveall, polychoron: polychoron }
+

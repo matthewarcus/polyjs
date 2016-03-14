@@ -180,7 +180,7 @@ THE SOFTWARE.
       <li><a href="poly.html?off=off/tet.off&function=dipolygonid&allvertices&alledges&rotate&run">Dipolygonid tetrahedron</a>
       <li><a href="poly.html?off=off/ico.off&function=dipolygonid&allvertices&alledges&rotate&run">Dipolygonid icosahedron</a> Verheyen's Vampire, (again)
       <li><a href="poly.html?off=off/rh_icosid.off&function=dipolygonid&z=5&allvertices&alledges&rotate&run">Tripolygonid rhombicosidodecahedron</a>?
-        The triangles don't stay the same size, but the other faces do, as well as remaining flat.
+        The triangles don't stay the same size, but the other faces do.
       <li><a href="poly.html?off=off/u34.off&function=dipolygonid&alledges&allvertices&rotate&run">U34</a>
       <li><a href="poly.html?off=off/u36.off&function=dipolygonid&alledges&allvertices&rotate&run">U36</a>
       <!-- <li><a href="poly.html?off=off/u37.off&function=dipolygonid&alledges&allvertices&rotate&run">U37</a> -->
@@ -193,7 +193,9 @@ THE SOFTWARE.
     <h3>Miscellaneous</h3>
     <ul>
       <li><a href="clebsch.html">The Clebsch Surface</a> Animated cubic surface. &lt;Space&gt; is start/stop, usual Orbit controls. Find the lines.
-      <li><a href="poly.html?function=hyper&allvertices&edgewidth=0.05&vertexwidth=0.1&off.C=2.4&z=18&rotate&run">Into the 4th dimension</a>: an <a href="https://en.wikipedia.org/wiki/Runcinated_tesseracts#Omnitruncated_tesseract">Omnitruncated Tesseract</a>. A 80-cell uniform polychoron, with a vertex for each of the 384 elements of the hyperoctahedral group. '9' and '0' zooms in and out (hither and yon?) in 4-space; &lt;space&gt; toggles rotation in 4-space. See code for the Wythoff construction in 4 dimensions.</li>
+      <li><a href="poly.html?function=hyper&off,angles=4:3:2:3:2:2&off.quad=1:1:1:1&allvertices&edgewidth=0.05&vertexwidth=0.1&off.w=2.4&z=18&rotate&run">Into the 4th dimension</a>: an <a href="https://en.wikipedia.org/wiki/Runcinated_tesseracts#Omnitruncated_tesseract">Omnitruncated Tesseract</a>. A 80-cell uniform polychoron, with a vertex for each of the 384 elements of the hyperoctahedral group. '9' and '0' zooms in and out (hither and yon?) in 4-space; &lt;space&gt; toggles rotation in 4-space. See code for the Wythoff construction in 4 dimensions.</li>
+      <li><a href="poly.html?function=hyper&off,angles=5:3:2:3:2:2&off.quad=1:0:0:0&allvertices&edgewidth=0.05&vertexwidth=0.1&off.w=8&z=25&rotate">The 120-cell</a>: the underlying symmetry group has 14400 elements.</li>
+            <li><a href="poly.html?function=hyper&off,angles=7:2:2:11:2:2&off.quad=1:1:1:1&allvertices&edgewidth=0.05&vertexwidth=0.1&off.w=10&z=30&rotate&run">A duoprism</a></li>
       <li><a href="poly.html?function=zoomer&z=0.2&run">Infinite Descent</a> An experiment in zooming in. Zooming out reveals the truth.</li>
       <li>A <a href="poly.html?function=zonohedron&off=off/icosid.off&off.k=1&z=1000&rotate">zonohedron</a>:
       a vast and fascinating area of polyhedral
@@ -224,7 +226,8 @@ THE SOFTWARE.
         The tetrahedron is constructed in 4-space, rotated with a quaternion & projected into
         3-space in the usual way.
         <li><a href="poly.html?function=desargues&vertexstyle=icosahedron&z=4&run">Desargues Theorem</a> Constructed from two congruent tetrahedra, then rotated in 4-space.
-        <li><a href="poly.html?function=slerp&z=6&run">SLERP</a> A square rotated 360 degrees in 32 steps with a SLERPed quaternion, with the quaternion itself changing over time. Note that one square and one vertex of each color never move.
+        <li><a href="poly.html?function=slerp&z=6&run">SLERP</a> A square rotated 360 degrees in 32 steps with a SLERPed quaternion, with the quaternion itself changing over time. Note that one square and one vertex of each color never move.</li>
+        <li><a href="poly.html?function=quat&allvertices&colorstyle=3&z=6&rotate">Rotations</a></li>
     </ul>
     <h3>Uniform Compounds</h3>
     Instead of using a set of Schwarz triangles to draw a polyhedron,
@@ -339,6 +342,7 @@ THE SOFTWARE.
       <li>27/2/15: Added Clebsch surface</li>
       <li>27/2/15: Remove keypress handling from non-full-window views</li>
       <li>11/3/15: Added SLERP demo<li>
+      <li>13/3/15: Configurable polychora & demos<li>
     </ul>
 </body> 
 </html>

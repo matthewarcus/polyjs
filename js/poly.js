@@ -316,9 +316,9 @@ PolyContext.prototype.processoptions = function(options) {
             context.offoptions.vertexwidth = Number(matches[1]);
         } else if (matches = arg.match(/^edgewidth=([\d.]+)$/)) {
             context.offoptions.edgewidth = Number(matches[1]);
-        } else if (matches = arg.match(/^off.([^=]+)=([-\d.]+)$/)) {
+        } else if (matches = arg.match(/^off.([^=]+)=(.+)$/)) {
             //console.log("Got", matches[1], matches[2])
-            context.offoptions[matches[1]] = Number(matches[2]);
+            context.offoptions[matches[1]] = matches[2];
         } else if (matches = arg.match(/^allvertices$/)) {
             context.offoptions.allvertices = true;
         } else if (matches = arg.match(/^alledges$/)) {

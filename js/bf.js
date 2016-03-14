@@ -13,6 +13,8 @@ PolyContext.prototype.loadbf = function(off,options) {
         options.bfheight = 0.0;
         options.bfheightinc = 0.02;
     }
+    options.bfheight = Number(options.bfheight);
+    options.bfheightinc = Number(options.bfheightinc);
     function yrot(p,theta) {
         return vector(Math.cos(theta)*p.x + Math.sin(theta)*p.z,
                       p.y,
@@ -368,17 +370,18 @@ PolyContext.prototype.zonohedron = function(off,options) {
             star.push(v);
         })
     } else {
-        var N = options.n || 3;
-        var M = options.m || 1;
+        var N = Number(options.n) || 3;
+        var M = Number(options.m) || 1;
         var scale = 1;
         if (options.theta != undefined) {
+            options.theta = Number(options.theta);
             console.log(options.theta)
             scale = 2*Math.sin(options.theta);
             options.theta += 0.01;
         }
         star = THREE.OFFLoader.makeStar(N,M,scale)
     }
-    var k = options.k || 0
+    var k = Number(options.k) || 0
     var newstar = []
     for (var i = 0; i < k; i++) {
         THREE.OFFLoader.starZonohedron(star,null,newstar)
@@ -430,10 +433,10 @@ PolyContext.prototype.polygon = function(off,options) {
     function addface(vlist,color) {
         faces.push({ vlist: vlist, color: color });
     }
-    var theta = options.theta || 0
+    var theta = Number(options.theta) || 0
     options.theta = theta + 0.01
-    var n = options.n || 5
-    var m = options.m || 1
+    var n = Number(options.n) || 5
+    var m = Number(options.m) || 1
     //console.log("polygon",n,m,theta)
     for (var i = 0; i < n; i++) {
         var a = i*Math.PI*2*m/n;
@@ -521,8 +524,8 @@ PolyContext.prototype.hoberman = function(off,options) {
     var faces = off.faces
     var newvertices = []
     var newfaces = []
-    var lambda = options.lambda || 1
-    options.lambdainc = options.lambdainc || 0.01
+    var lambda = Number(options.lambda) || 1
+    options.lambdainc = Number(options.lambdainc) || 0.01
     options.lambda = lambda + options.lambdainc
     var eps = 1e-4
     if (1-eps < lambda && lambda < 1+eps) { lambda = 1-eps; }
@@ -618,7 +621,7 @@ PolyContext.prototype.invert = function (off, options) {
     var vsub = THREE.OFFLoader.Utils.vsub
     var vdiv = THREE.OFFLoader.Utils.vdiv
     if (!off) return;
-    options.t = options.t || 0;
+    options.t = Number(options.t) || 0;
     var t = options.t;
     var icentre = vector(0.6*Math.sin(t),0.1*Math.cos(t/3),0);
     options.t += 0.01;
