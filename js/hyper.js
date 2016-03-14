@@ -508,7 +508,7 @@
         return polychoron(angles,quad,camera);
     }
     PolyContext.prototype.quat = function(off,options,running) {
-        let quat = [2,0,0,0];
+        var quat = [2,0,0,0];
         var dquat1 = Vector.normalize([1,0.2,0.0,0.0]);
         var dquat2 = Vector.normalize([1,0.0,0.2,0.0]);
         var dquat3 = Vector.normalize([1,0.0,0.0,0.2]);
