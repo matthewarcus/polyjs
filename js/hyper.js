@@ -507,28 +507,53 @@
         }
         return polychoron(angles,quad,camera);
     }
+
+    function from(n,m,f) { for (var i = n; i < m; i++) f(i); }
+
     PolyContext.prototype.quat = function(off,options,running) {
-        var quat = [2,0,0,0];
-        var dquat1 = Vector.normalize([1,0.2,0.0,0.0]);
-        var dquat2 = Vector.normalize([1,0.0,0.2,0.0]);
-        var dquat3 = Vector.normalize([1,0.0,0.0,0.2]);
-        var dquat4 = Vector.normalize([1,0.2,0.2,0.2]);
+        var Color = THREE.OFFLoader.Utils.Color;
+
+        // Every unit quaternion can be written as cos a + i sin a,
+        // where i is a pure unit quaternion (which we can regard
+        // as a direction in the hypersphere). For a given i, the
+        // set of all such points forms a geodesic.
+        // q^n = cos na + i sin na
+        var r1 = Vector.normalize([1,0.0,0.0,0.01]);
+        var r2 = Vector.normalize([1,0.0,0.01,0.0]);
+        var dbase1 = options.dbase1 || Vector.normalize([0,1,0,0]);
+        var dbase2 = options.dbase2 || Vector.normalize([0,1,0,0]);
+        options.dbase1 = qmul(qconj(r1),qmul(dbase1,r1))
+        options.dbase2 = qmul(qconj(r2),qmul(dbase2,r2))
+
+        // Now draw what I think is a Clifford torus.
+        var K = 30;
+        var J = 31;
+        var N = K*J;
+        var alpha1 = 2*Math.PI/K;
+        var cosa1 = Math.cos(alpha1);
+        var sina1 = Math.sin(alpha1);
+        var dquat1 = [cosa1,sina1*dbase1[1],sina1*dbase1[2],sina1*dbase1[3]];
+        var alpha2 = 2*Math.PI/J;
+        var cosa2 = Math.cos(alpha2);
+        var sina2 = Math.sin(alpha2);
+        var dquat2 = [cosa2,sina2*dbase2[1],sina2*dbase2[2],sina2*dbase2[3]];
+
         var vertices = [];
         var faces = [];
-        var N = 1000;
-        for (var i = 0; i < N; i++) {
+        var quat = [2,0,0,0];
+        from(0,N,function(i) {
             vertices.push(new THREE.Vector3(quat[1],quat[2],quat[3]));
             quat = qmul(quat,dquat1);
             quat = qmul(dquat2,quat);
-            quat = qmul(quat,dquat4);
-            //quat = qmul(dquat4,quat);
-        }
-        for (var i = 0; i < N-1; i++) {
-            faces.push({ vlist: [i,i+1] });
-        }
-        return {vertices: vertices, faces: faces }
+            // We are doing an orthogonal projection of a hypersphere,
+            // with both hemihyperspheres mapped to the same sphere,
+            // so colour points differently in each.
+            color = (quat[0] < 0)? Color.green: Color.red;
+            faces.push({ vlist: [i], color: color });
+        });
+        from(0,N-1,function(i) { faces.push({ vlist: [i,i+1], color: Color.white }); });
+        return { vertices: vertices, faces: faces }
     }
 })()
 
 //module.exports = { solveall: solveall, polychoron: polychoron }
-
