@@ -468,11 +468,11 @@ PolyContext.prototype.handleKey = function(key) {
         this.hideface[3] = !this.hideface[3];
         break;
     case '9':
-        this.offoptions.C *= 1.1;
+        this.offoptions.w *= 1.1;
         this.needclone = true;
         break;
     case '0':
-        this.offoptions.C /= 1.1;
+        this.offoptions.w /= 1.1;
         this.needclone = true;
         break;
     default:
