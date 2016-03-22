@@ -815,6 +815,137 @@ PolyContext.prototype.slerp = function(off,options) {
     return { vertices: vertices, faces: faces }
 }
 
+PolyContext.prototype.desargues2 = function(off,options) {
+    var Vector3 = THREE.Vector3
+    var Vector4 = THREE.Vector4
+    var vnegate = THREE.OFFLoader.Utils.vnegate
+    var vadd = THREE.OFFLoader.Utils.vadd
+    var vadd3 = THREE.OFFLoader.Utils.vadd3
+    var vsub = THREE.OFFLoader.Utils.vsub
+    var vdiv = THREE.OFFLoader.Utils.vdiv
+    var vmul = THREE.OFFLoader.Utils.vmul
+    var vdot = THREE.OFFLoader.Utils.vdot
+    var qmul = THREE.OFFLoader.Utils.qmul
+    var vcross = THREE.OFFLoader.Utils.vcross
+    var Color = THREE.OFFLoader.Utils.Color;
+    var x = Math.sqrt(5);
+    var pentatope =
+        [Vector4(1,1,1,-1/x),
+         Vector4(1,-1,-1,-1/x),
+         Vector4(-1,1,-1,-1/x),
+         Vector4(-1,-1,1,-1/x),
+         Vector4(0,0,0,x-1/x)];
+    var n = Vector4(0,0,0,1);
+    var k = 1;
+    var a = pentatope.map(function(p) { n.dot(p) });
+    var p = [];
+}
+
+PolyContext.prototype.desargues2 = function(off,options) {
+    var Vector3 = THREE.Vector3
+    var Vector4 = THREE.Vector4
+    var vnegate = THREE.OFFLoader.Utils.vnegate
+    var vadd = THREE.OFFLoader.Utils.vadd
+    var vadd3 = THREE.OFFLoader.Utils.vadd3
+    var vsub = THREE.OFFLoader.Utils.vsub
+    var vdiv = THREE.OFFLoader.Utils.vdiv
+    var vmul = THREE.OFFLoader.Utils.vmul
+    var vdot = THREE.OFFLoader.Utils.vdot
+    var qmul = THREE.OFFLoader.Utils.qmul
+    var vcross = THREE.OFFLoader.Utils.vcross
+    var Color = THREE.OFFLoader.Utils.Color;
+    var x = Math.sqrt(5);
+
+    function random4() {
+        var args = []
+        for (var i = 0; i < 4; i++) {
+            args.push(-1 + 2*Math.random());
+        }
+        return new Vector4(args[0],args[1],args[2],args[3]);
+    }
+    var vertices = [];
+    var faces = [];
+    var pentatope = options.pentatope;
+    if (!pentatope) {
+        if (0) {
+            pentatope = [];
+            for (var i = 0; i < 5; i++) {
+                pentatope.push(random4());
+            }
+        } else {
+            pentatope =
+                [ new Vector4(1,1,1,-1/x),
+                  new Vector4(1,-1,-1,-1/x),
+                  new Vector4(-1,1,-1,-1/x),
+                  new Vector4(-1,-1,1,-1/x),
+                  new Vector4(0,0,0,x-1/x)
+                ];
+        }
+        options.pentatope = pentatope;
+    }
+    var n = new Vector4(4,3,2,1);
+    n.normalize();
+    var lambda = 0;
+    for (var i = 0; i < 5; i++) {
+        vertices.push(pentatope[i]);
+    }
+    var pairs = [];
+    for (var i = 0; i < 5; i++) {
+        faces.push({ vlist: [i], color: Color.red });
+        for (var j = i+1; j < 5; j++) {
+            faces.push({ vlist: [i,j], color: Color.yellow });
+            // Find a such that (a*v[i] + (1-a)v[j]).n = k
+            // ie. a*(v[i].n - v[j].n) = k - v[j].n
+            var ti = n.dot(pentatope[i])
+            var tj = n.dot(pentatope[j])
+            if (Math.abs(ti-tj) < 1e-5) {
+                // Avoid division by zero or very small.
+                var a = 10000; // Approximately infinity
+            } else {
+                var a = (lambda - tj)/(ti - tj);
+            }
+            var p = vadd(vmul(pentatope[i],a),vmul(pentatope[j],1-a));
+            var k = vertices.length;
+            pairs.push([i,j,k]);
+            vertices.push(p);
+            //console.log(p,a,ti,tj);
+            faces.push({ vlist: [k], color: Color.green });
+        }
+    }
+    function findpair(i,j) {
+        for (var n = 0; n < pairs.length; n++) {
+            if (pairs[n][0] == i && pairs[n][1] == j) {
+                return pairs[n][2];
+            }
+        }
+        console.assert(false);
+    }
+    for (var i = 0; i < 5; i++) {
+        for (var j = i+1; j < 5; j++) {
+            for (var k = j+1; k < 5; k++) {
+                // I know the line segments overlap, I'm being lazy
+                var p = findpair(i,j);
+                var q = findpair(i,k);
+                var r = findpair(j,k);
+                faces.push({ vlist: [p,q] });
+                faces.push({ vlist: [q,r] });
+                faces.push({ vlist: [r,p] });
+            }
+        }
+    }
+    for (var i = 0; i < 5; i++) {
+        var q = new Vector4(1,0,0.01,0.01);
+        q.normalize();
+        qmul(q,pentatope[i],pentatope[i]);
+        //var r = new Vector4(1,0.01,0,0);
+        //r.normalize();
+        //qmul(pentatope[i],r,pentatope[i]);
+    }
+    return { vertices: vertices, faces: faces }
+}
+    
+         
+
 //eqtest()
 // function doit() {
 //     vertices.push([0,0,0]);
