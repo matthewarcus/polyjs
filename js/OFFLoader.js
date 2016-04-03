@@ -343,7 +343,7 @@
             }
         }
         for ( i = 0, il = uvs2.length; i < il; i++ ) {
-            var uv1 = face1.uvs;
+            var uv1 = faces1[faceOffset+i].uvs;
             var uv2 = uvs2[ i ]
             for ( var j = 0, jl = uv2.length; j < jl; j ++ ) {
                 uv1[j].x = uv2[j].x
