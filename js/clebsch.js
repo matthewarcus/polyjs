@@ -25,7 +25,7 @@
 // Construct a representation of the Clebsch surface as a Three.js Points object
 // The surface is stored as a set of homogeneous coordinates, for display we
 // multiply by a varying quaternion to perform an isoclinic rotation in
-// projective space (before doing the usual projection to 3-space).
+// projective space before doing the usual projection to Euclidean 3-space.
 
 // The Clebsch surface has the equation (in projective 4-space):
 
@@ -38,7 +38,12 @@
 // for projective 3-space (ie. with 4-element homogeneous coordinates).
 
 // Since equations are homogeneous, can just consider case of w = 1 and w = 0 (plane
-// at infinity). Plane at infinity solutions aren't that interesting. For w = 1, we have:
+// at infinity).
+
+// For w = 0, it turns out the solutions are some of the 27 lines which we draw
+// separately.
+
+// For w = 1, we have:
 
 // (x+y+z+1)^3 = x^3 + y^3 + z^3 + 1
 
@@ -50,8 +55,14 @@
 // where A = x+y+1, B = x^3 + y^3 + 1
 
 // This give a set of homogeneous points [x,y,z,w] satisfying [***] and we can
-// cyclically permute the coordinates to get further solutions (any permutation
-// is a solution in fact).
+// permute the coordinates to get further solutions.
+
+// The Clebsch surface of course is famous for its 27 lines, so we draw these in as
+// well, also as random selection of points rather than a solid line.
+// 15 lines are points of the form (a,-a,b,-b,0) and permutations - since we are
+// working in 4-space, this becomes 12 lines of form (a,-a,b,0) and three of
+// form (a,-a,b,-b). The other 12 lines are of the form (a,b,-(phi*a+b),-(a+phi*b),1)
+// where phi is the golden ratio, 1.618..
 
 // All that remains is to project into 3-space - as usual we divide by the w-coordinate,
 // but to get different projections, before doing this we rotate in projective space
@@ -62,10 +73,6 @@
 // case) - a 4-space rotation is uniquely represented (up to sign) by x -> pxq where p
 // and q are unit quaternions (representing 'isoclinic' or 'Clifford' rotations -
 // rotations by the same amount about different planes, giving a twisty-turny effect)).
-
-// The Clebsch surface of course is famous for its 27 lines, these are visible
-// in our animation, though some may be hiding in the plane at infinity or not have
-// enough points displayed to be easily discerned.
 
 // Usual disclaimers: this could all be hopelessly incorrect, I'm not an algebraic
 // geometrist or even a proper mathematician. Main purpose is to make something
@@ -98,26 +105,50 @@ var Clebsch = {};
         }
     }
 
+    var Colors = {
+        white: new THREE.Color(1,1,1),
+        red: new THREE.Color(1,0,0),
+        green: new THREE.Color(0,1,0),
+        blue: new THREE.Color(0,0,1),
+        yellow: new THREE.Color(1,1,0),
+        cyan: new THREE.Color(0,1,1),
+        magenta: new THREE.Color(1,0,1),
+    };
+
     // Accumulate the surface points here.
     var points = [];
+    var colors = [];
 
     function cube(x) { return x*x*x; }
-    function check(x,y,z,w) {
+    function check(x,y,z,w,color) {
         var t1 = cube(x+y+z+w);
         var t2 = cube(x)+cube(y)+cube(z)+cube(w);
-        var diff = Math.abs(t1-t2);
-        if (diff >= 1e-6) {
+        var scale = Math.abs(x) + Math.abs(y) + Math.abs(z) + Math.abs(w);
+        var diff = Math.abs(t1-t2)/scale;
+        if (diff >= 1e-5) {
             console.log("Equation fails:",x,y,z,w,diff);
         }
         points.push(new THREE.Vector4(x,y,z,w));
+        colors.push(color);
+    }
+
+    function perm6(x1,x2,x3,x4,color1,color2) {
+        color2 = color2 || color1;
+        // even permutations -> color1
+        // odd permutations -> color2
+        check(x1,x2,x3,x4,color1);
+        check(x1,x3,x2,x4,color2);
+        check(x1,x3,x4,x2,color1);
+        check(x3,x1,x2,x4,color1);
+        check(x3,x1,x4,x2,color2);
+        check(x3,x4,x1,x2,color1);
     }
 
     function solve(x,y) {
         // Find solutions for (x,y,z,w) with w = 1
         // and (x+y+z+w)^3 == x^3+y^3+z^3+w^3
-        // Solutions for w = 0 form some of the famous 27 lines
-        // we ignore them as otherwise they dominate the image
-        // (the lines are visible anyway).
+        // Solutions for w = 0 form some of the 27 lines
+        // which we draw separately.
         var w = 1;
         var A = x+y+w;
         var B = x*x*x + y*y*y + w;
@@ -131,20 +162,11 @@ var Clebsch = {};
             var z0 = t[0];
             var z1 = t[1];
             // All permutations of x,y,z,w are solutions,
-            // we just use the cyclic shifts. Of course,
-            // the solutions overlap, but when the points are
-            // colored differently, a nice patchwork arises.
-            check(x,y,z0,w);
-            check(x,y,z1,w);
-            check(w,x,y,z0);
-            check(w,x,y,z1);
-            check(z0,w,x,y);
-            check(z1,w,x,y);
-            check(y,z0,w,x);
-            check(y,z1,w,x);
+            // But these 12 give good coverage of the surface
+            perm6(x,y,z0,w,Colors.red,Colors.blue);
+            perm6(x,y,z1,w,Colors.green,Colors.yellow);
         }
     }
-    // Construct a square grid of solutions.
     function generate(A,inc) {
         var eps = 1e-4;
         for (var x = -A; x < A+eps; x += inc) {
@@ -153,12 +175,70 @@ var Clebsch = {};
             }
         }
     }
-    generate(5,0.1);
+    // Random point in (-Infinity,+Infinity) but
+    // clustered around origin.
+    function randpoint() {
+        var x = 1/(2*Math.random()-1);
+        if (x < 0) x += 1;
+        if (x > 0) x -= 1;
+        return x;
+    }
+    // Main surface.
+    function generate1(N) {
+        for (var i = 0; i < N*N; i++) {
+            var x1 = randpoint();
+            var x2 = randpoint();
+            solve(x1,x2);
+        }
+    }
+    // 15 lines
+    function generate2(N) {
+        var color = Colors.white;
+        for (var i = 0; i < N; i++) {
+            var x = randpoint();
+            var y = randpoint();
+            perm6(x,-x,y,0,color);
+            perm6(x,-x,0,y,color);
+            // Need these 3 extra perms for lines 13-15
+            check(x,-x,-y,y,color);
+            check(x,-y,-x,y,color);
+            check(-y,x,-x,y,color);
+        }
+    }
+    // 12 lines
+    function generate3(N) {
+        var color1 = Colors.cyan;
+        var color2 = Colors.magenta;
+        for (var i = 0; i < N; i++) {
+            var p = (1 + Math.sqrt(5))/2;
+            var x1 = randpoint();
+            var x2 = randpoint();
+            var x3 = -(x1 + p*x2);
+            var x4 = -(p*x1 + x2);
+            // Color to get a "Double-Six".
+            perm6(x1,x2,x3,x4,color1,color2);
+            perm6(x1,x2,x4,x3,color2,color1);
+        }
+    }
+
+    var N = 100;
+    var ranges = [];
+    generate3(2*N); // 12 lines
+    ranges.push(points.length);
+    generate2(2*N); // 15 lines
+    ranges.push(points.length);
+    generate1(N); // Main surface
+    //generate(5,0.1);
+    ranges.push(points.length);
     var npoints = points.length;
-    console.log("Generated:",npoints);
+    var nranges = ranges.length;
+    var range = nranges-1;
+    
+    console.log("Generated:", npoints);
 
     var renderer;
     var camera;
+    var geometry;
     Clebsch.runOnWindow = function(canvas) {
         window.addEventListener("resize", function() {
             if (renderer) {
@@ -173,11 +253,21 @@ var Clebsch = {};
         window.addEventListener("keypress", function (event) {
             if (!event.ctrlKey) {
                 // Ignore event if control key pressed.
-                switch(String.fromCharCode(event.charCode)) {
+                var c = String.fromCharCode(event.charCode);
+                switch(c) {
                 case ' ':
                     running = !running;
                     event.preventDefault();
                     break;
+                case '[':
+                    range = (range+nranges-1)%nranges;
+                    geometry.setDrawRange(0,ranges[range]);
+                    break;
+                case ']':
+                    range = (range+1)%nranges;
+                    geometry.setDrawRange(0,ranges[range]);
+                    break;
+                    de
                 }
             }
         }, false);
@@ -189,7 +279,7 @@ var Clebsch = {};
             map: THREE.ImageUtils.loadTexture("images/ball.png"),
             alphaTest: 0.5, // Clip to texture
         });
-        var geometry = new THREE.BufferGeometry();
+        geometry = new THREE.BufferGeometry();
         geometry.dynamic = true;
         scene.add(new THREE.Points(geometry,material));
         
@@ -199,7 +289,7 @@ var Clebsch = {};
         renderer = new THREE.WebGLRenderer(params);
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(width,height); 
-
+        renderer.setClearColor(new THREE.Color(0,0,0.1));
         camera = new THREE.PerspectiveCamera(45, width/height, 0.1, 1000);
         camera.position.z = 6; 
 
@@ -221,20 +311,15 @@ var Clebsch = {};
         quat.normalize();
         // and rotate the quaternion each time around the loop
         // by multiplication with quinc.
-        var quinc = new THREE.Vector4(1,0,0.01,0);
+        var quinc = new THREE.Vector4(1,0.005,0.01,0.007);
         quinc.normalize();
-        var colors = [ new THREE.Color(1,0,0),
-                       new THREE.Color(0,1,0),
-                       new THREE.Color(0,0,1),
-                       new THREE.Color(1,1,0),
-                     ];
 
         // Set up buffers.
         var vertexarray = new Float32Array(npoints*3);
         var colorarray = new Float32Array(npoints*4);
         // Colors are static
         for (var i = 0; i < npoints; i++) {
-            var color = colors[i%colors.length];
+            var color = colors[i];
             colorarray[4*i+0] = color.r;
             colorarray[4*i+1] = color.g;
             colorarray[4*i+2] = color.b;
@@ -254,11 +339,8 @@ var Clebsch = {};
                 // w might be 0, but apart from making bounding box
                 // calculations difficult, nothing too awful seems to happen.
                 // All the same, clamp to a small non-zero value.
-                if (w >= 0) {
-                    if (w < eps) w = eps;
-                } else {
-                    if (w > -eps) w = -eps;
-                }
+                if (0 <= w && w < eps) w = eps;
+                if (-eps < w && w < 0) w = -eps;
                 x /= w; y /= w; z /= w;
                 vertexarray[3*i+0] = x;
                 vertexarray[3*i+1] = y;
