@@ -27,53 +27,6 @@
 // multiply by a varying quaternion to perform an isoclinic rotation in
 // projective space before doing the usual projection to Euclidean 3-space.
 
-// The Clebsch surface has the equation (in projective 4-space):
-
-// x0+x1+x2+x3+x4 = 0, x0^3+x1^3+x2^3+x3^3+x4^3 = 0
-
-// Eliminating x0 and renaming a little, we get:
-
-// (x+y+z+w)^3 = x^3 + y^3 + z^3 + w^3  [***]
-
-// for projective 3-space (ie. with 4-element homogeneous coordinates).
-
-// Since equations are homogeneous, can just consider case of w = 1 and w = 0 (plane
-// at infinity).
-
-// For w = 0, it turns out the solutions are some of the 27 lines which we draw
-// separately.
-
-// For w = 1, we have:
-
-// (x+y+z+1)^3 = x^3 + y^3 + z^3 + 1
-
-// Given values for x and y, we can solve for z easily - the cubes drop out and we just
-// have a quadratic equation that can be solved in the usual way:
-
-// 3Az^2 + 3A^2z + A^3 - B = 0
-
-// where A = x+y+1, B = x^3 + y^3 + 1
-
-// This give a set of homogeneous points [x,y,z,w] satisfying [***] and we can
-// permute the coordinates to get further solutions.
-
-// The Clebsch surface of course is famous for its 27 lines, so we draw these in as
-// well, also as random selection of points rather than a solid line.
-// 15 lines are points of the form (a,-a,b,-b,0) and permutations - since we are
-// working in 4-space, this becomes 12 lines of form (a,-a,b,0) and three of
-// form (a,-a,b,-b). The other 12 lines are of the form (a,b,-(phi*a+b),-(a+phi*b),1)
-// where phi is the golden ratio, 1.618..
-
-// All that remains is to project into 3-space - as usual we divide by the w-coordinate,
-// but to get different projections, before doing this we rotate in projective space
-// by multiplying by a quaternion & then varying the quaternion varies the projection.
-// (Quaternion [d,-a,-b,-c] puts plane [a,b,c,d] at infinity - alternatively, rotates
-// [a,b,c,d] to [0,0,0,1] - it's well known that quaternions can be used to represent
-// rotations in 3-space, but they also work for 4-space (with 3-space as a special
-// case) - a 4-space rotation is uniquely represented (up to sign) by x -> pxq where p
-// and q are unit quaternions (representing 'isoclinic' or 'Clifford' rotations -
-// rotations by the same amount about different planes, giving a twisty-turny effect)).
-
 // Usual disclaimers: this could all be hopelessly incorrect, I'm not an algebraic
 // geometrist or even a proper mathematician. Main purpose is to make something
 // that looks nice & I hope it succeeds in that at least.
