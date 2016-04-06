@@ -106,11 +106,11 @@ var Clebsch = {};
     }
 
     var Colors = {
-        white: new THREE.Color(1,1,1),
         red: new THREE.Color(1,0,0),
         green: new THREE.Color(0,1,0),
         blue: new THREE.Color(0,0,1),
         yellow: new THREE.Color(1,1,0),
+        white: new THREE.Color(1,1,1),
         cyan: new THREE.Color(0,1,1),
         magenta: new THREE.Color(1,0,1),
     };
@@ -144,6 +144,14 @@ var Clebsch = {};
         check(x3,x4,x1,x2,color1);
     }
 
+    var color1 = Colors.red;
+    var color2 = Colors.blue;
+    var color3 = Colors.green;
+    var color4 = Colors.yellow;
+    var color5 = Colors.cyan;
+    var color6 = Colors.magenta;
+    var color7 = Colors.white;
+    
     function solve(x,y) {
         // Find solutions for (x,y,z,w) with w = 1
         // and (x+y+z+w)^3 == x^3+y^3+z^3+w^3
@@ -163,16 +171,8 @@ var Clebsch = {};
             var z1 = t[1];
             // All permutations of x,y,z,w are solutions,
             // But these 12 give good coverage of the surface
-            perm6(x,y,z0,w,Colors.red,Colors.blue);
-            perm6(x,y,z1,w,Colors.green,Colors.yellow);
-        }
-    }
-    function generate(A,inc) {
-        var eps = 1e-4;
-        for (var x = -A; x < A+eps; x += inc) {
-            for (var y = -A; y < A+eps; y += inc) {
-                solve(x,y);
-            }
+            perm6(x,y,z0,w,color1,color2);
+            perm6(x,y,z1,w,color3,color4);
         }
     }
     // Random point in (-Infinity,+Infinity) but
@@ -193,22 +193,19 @@ var Clebsch = {};
     }
     // 15 lines
     function generate2(N) {
-        var color = Colors.white;
         for (var i = 0; i < N; i++) {
             var x = randpoint();
             var y = randpoint();
-            perm6(x,-x,y,0,color);
-            perm6(x,-x,0,y,color);
+            perm6(x,-x,y,0,color7);
+            perm6(x,-x,0,y,color7);
             // Need these 3 extra perms for lines 13-15
-            check(x,-x,-y,y,color);
-            check(x,-y,-x,y,color);
-            check(-y,x,-x,y,color);
+            check(x,-x,-y,y,color7);
+            check(x,-y,-x,y,color7);
+            check(-y,x,-x,y,color7);
         }
     }
     // 12 lines
     function generate3(N) {
-        var color1 = Colors.cyan;
-        var color2 = Colors.magenta;
         for (var i = 0; i < N; i++) {
             var p = (1 + Math.sqrt(5))/2;
             var x1 = randpoint();
@@ -216,8 +213,8 @@ var Clebsch = {};
             var x3 = -(x1 + p*x2);
             var x4 = -(p*x1 + x2);
             // Color to get a "Double-Six".
-            perm6(x1,x2,x3,x4,color1,color2);
-            perm6(x1,x2,x4,x3,color2,color1);
+            perm6(x1,x2,x3,x4,color5,color6);
+            perm6(x1,x2,x4,x3,color6,color5);
         }
     }
 
@@ -228,14 +225,11 @@ var Clebsch = {};
     generate2(2*N); // 15 lines
     ranges.push(points.length);
     generate1(N); // Main surface
-    //generate(5,0.1);
     ranges.push(points.length);
     var npoints = points.length;
     var nranges = ranges.length;
     var range = nranges-1;
     
-    console.log("Generated:", npoints);
-
     var renderer;
     var camera;
     var geometry;
@@ -294,15 +288,6 @@ var Clebsch = {};
         camera.position.z = 6; 
 
         var controls = new THREE.OrbitControls( camera, canvas );
-
-        // Don't need lights for a Points object...
-        
-        var stats; // = new Stats();
-        if (stats) {
-	    stats.domElement.style.position = 'absolute';
-	    stats.domElement.style.top = '0px';
-	    canvas.parentNode.appendChild(stats.domElement);
-        }
 
         // A quaternion represents an (isoclinic) rotation in
         // 4-space - effectively changing the 'plane at infinity'.
