@@ -293,7 +293,6 @@ var Clebsch = {};
             setvertices();
             if (running) qmul(quat,quinc,quat);
             renderer.render(scene, camera);
-            if (stats) stats.update();
         }
         requestAnimationFrame(dorender);
     }
