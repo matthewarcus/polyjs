@@ -408,11 +408,11 @@ var Clebsch = {};
                     running = true;
                 } else if (matches = arg.match(/^stop$/)) {
                     running = false;
-                } else if (matches = arg.match(/^morph$/)) {
-                    surface = 0;
                 } else if (matches = arg.match(/^clebsch$/)) {
-                    surface = 1;
+                    surface = 0;
                 } else if (matches = arg.match(/^cayley$/)) {
+                    surface = 1;
+                } else if (matches = arg.match(/^morph$/)) {
                     surface = 2;
                 } else if (matches = arg.match(/^surface=([\d]+)$/)) {
                     surface = Number(matches[1])%surfaces.length;
@@ -449,7 +449,7 @@ var Clebsch = {};
                 var c = String.fromCharCode(event.charCode);
                 switch(c) {
                 case 'a':
-                    // Zoom out
+                    // Decrease object scale
                     scale /= 1.1;
                     break;
                 case 'c':
@@ -476,7 +476,7 @@ var Clebsch = {};
                     quat = new THREE.Vector4(1,0,0,0);
                     break;
                 case 's':
-                    // Zoom in
+                    // Increase object scale
                     scale *= 1.1;
                     break;
                 case 't':
