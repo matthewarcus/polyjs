@@ -147,12 +147,22 @@ var Clebsch = {};
     // Accumulate the surface points here.
     var points = [];
     var colors = [];
+    var npoints = 0;
 
     function addpoint(x,y,z,w,color) {
         console.assert(color);
-        var point = new THREE.Vector4(x,y,z,w);
-        points.push(point);
-        colors.push(color);
+        if (points.length <= npoints) {
+            points.push(new THREE.Vector4);
+            colors.push(null);
+        }
+        var point = points[npoints];
+        point.x = x;
+        point.y = y;
+        point.z = z;
+        point.w = w;
+        // Assume we don't need to copy the color
+        colors[npoints] = color;
+        npoints++;
     }
 
     function perm6(x1,x2,x3,x4,color1,color2) {
@@ -350,17 +360,14 @@ var Clebsch = {};
 
     var surfaces = [clebsch, cayley, morph];
     var surface = 0;
-    var npoints;
 
     var vertexarray;
     var colorarray;
     var geometry;
 
     function setgeometry() {
-        points = [];
-        colors = [];
+        npoints = 0;
         var redraw = surfaces[surface](); // Compute points
-        npoints = points.length;
 
         // Reset random so we get the same collection of points
         randomindex = 0;
@@ -557,6 +564,7 @@ var Clebsch = {};
         }
         
         var dorender = function () {
+            //console.log(npoints, points.length);
             // Do a full render whether we need to or not.
             setTimeout(function() { requestAnimationFrame(dorender); }, 1000 / 25 );
             if (needupdate) {
