@@ -7,6 +7,16 @@
       * { border: 0; padding: 0; margin: 0; }
       canvas { width: 100%; height: 100%; background: black; }
       body { overflow: hidden; }
+      #info {
+      position: absolute;
+      top: 0px; width: 100%;
+      text-align:center;
+      font-size: small;
+      font-family: verdana,san-serif;
+      color: white;
+      }
+      #info.a { background: white; }
+
     </style> 
   </head> 
   <body> 
@@ -14,9 +24,10 @@
     <script src="js/three/OrbitControls.js"></script> 
     <script src="js/clebsch.js"></script> 
     <canvas id="canvas1"></canvas>
+    <div id="info"><a href="http://threejs.org" target="_blank">github</a> cubic viewer</div>
     <script>
       window.onload = function() {
-      Clebsch.runOnWindow(canvas1);
+      Clebsch.runOnWindow(canvas1,info);
       }
     </script>
 </body> 

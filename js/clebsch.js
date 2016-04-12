@@ -395,7 +395,7 @@ var Clebsch = {};
         return redraw;
     }
 
-    Clebsch.runOnWindow = function(canvas) {
+    Clebsch.runOnWindow = function(canvas,info) {
         var renderer;
         var camera;
         var quat;
@@ -403,6 +403,18 @@ var Clebsch = {};
 
         var running = true;
 
+        var infostring =
+            's/a: +/- scale, c: color scheme, m: morphing, p: projection, q: quaternion, ' +
+            'r: reset, t: type, &lt;space&gt: toggle rotation, &lt;up&gt;/&lt;down&gt;: in &amp; out, ?: toggle info';
+
+        var showinfo = true;
+        function setshowinfo() {
+            if (showinfo) {
+                info.style.display = 'block';
+            } else {
+                info.style.display = 'none';
+            }
+        }
         function processoptions(options) {
             var args = options.split('&');
             args.forEach(function (arg) {
@@ -415,6 +427,8 @@ var Clebsch = {};
                     running = true;
                 } else if (matches = arg.match(/^stop$/)) {
                     running = false;
+                } else if (matches = arg.match(/^noinfo$/)) {
+                    showinfo = false;
                 } else if (matches = arg.match(/^clebsch$/)) {
                     surface = 0;
                 } else if (matches = arg.match(/^cayley$/)) {
@@ -441,6 +455,7 @@ var Clebsch = {};
             options = options.slice(1)
         }
         processoptions(options);
+        setshowinfo();
         window.addEventListener("resize", function() {
             if (renderer) {
                 var w = window.innerWidth;
@@ -490,6 +505,10 @@ var Clebsch = {};
                     // Change surface
                     surface = (surface+1)%surfaces.length;
                     needupdate = true;
+                    break;
+                case '?':
+                    showinfo = !showinfo;
+                    setshowinfo();
                     break;
                 case ' ':
                     running = !running;
@@ -562,8 +581,33 @@ var Clebsch = {};
             }
             geometry.attributes.position.needsUpdate = true;
         }
-        
-        var dorender = function () {
+
+        function format(x) {
+            var s = x.toFixed(2);
+            while (s.length < 5) s = '&nbsp;' + s;
+            return s;
+        }
+        function statestring() {
+            var s = '';
+            switch (surface) {
+            case 0: s += "Clebsch surface: "; break;
+            case 1: s += "Cayley surface: "; break;
+            case 2: s += "Morphing surface: "; break;
+            default: s += "<Unknown surface>: "; break;
+            }
+            s += "q=[ " + format(quat.x) + " " + format(quat.y) +
+                " " + format(quat.z) + " " + format(quat.w) + " ]";
+            if (matrices[matrixindex]) {
+                var elements = matrices[matrixindex].elements;
+                s += " m=[";
+                for (var i = 0; i < elements.length; i++) {
+                    s += format(elements[i]) + " ";
+                }
+                s += "] ";
+            }
+            return s;
+        }
+        function dorender() {
             //console.log(npoints, points.length);
             // Do a full render whether we need to or not.
             setTimeout(function() { requestAnimationFrame(dorender); }, 1000 / 25 );
@@ -574,6 +618,7 @@ var Clebsch = {};
             if (running) {
                 qmul(quat,quinc[quincindex],quat);
             }
+            if (showinfo) info.innerHTML = infostring + '<p>' + statestring();
             renderer.render(scene, camera);
         }
         requestAnimationFrame(dorender);
