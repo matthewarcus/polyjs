@@ -7,15 +7,18 @@
       * { border: 0; padding: 0; margin: 0; }
       canvas { width: 100%; height: 100%; background: black; }
       body { overflow: hidden; }
-      #info {
+      #info,#link {
       position: absolute;
-      top: 0px; width: 100%;
       text-align:center;
       font-size: small;
       font-family: verdana,san-serif;
       color: white;
       }
-      #info.a { background: white; }
+      #info { top: 0px; width: 100%; }
+      #link { bottom: 0px; width: 100%; }
+      a {
+      color: cyan;
+      }
 
     </style> 
   </head> 
@@ -23,11 +26,13 @@
     <script src="js/three/three.min.js"></script> 
     <script src="js/three/OrbitControls.js"></script> 
     <script src="js/clebsch.js"></script> 
+    <!-- <div id="link"><a href="https://github.com/matthewarcus/polyjs#cubics">https://github.com/matthewarcus/polyjs#cubics</a></div> -->
+    <div id="link"><a href="http://matthewarcus.github.io/polyjs/#cubics">http://matthewarcus.github.io/polyjs/#cubics</a></div>
+    <div id="info"></div>
     <canvas id="canvas1"></canvas>
-    <div id="info"><a href="http://threejs.org" target="_blank">github</a> cubic viewer</div>
     <script>
       window.onload = function() {
-      Clebsch.runOnWindow(canvas1,info);
+      Clebsch.runOnWindow(canvas1,info,link);
       }
     </script>
 </body> 

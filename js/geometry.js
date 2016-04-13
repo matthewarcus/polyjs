@@ -425,7 +425,7 @@ var Geometry = {};
         var faces = [[],[],[]];
         var adjacent = [];
         function getpoint(p) {
-            var eps = 1e-6;
+            var eps = 1e-4;
             for (var i = 0; i < points.length; i++) {
                 if (Vector.approxeq(points[i],p,eps)) {
                     return i;
@@ -483,6 +483,7 @@ var Geometry = {};
         for (var i = 0; i != regions.length; i++) {
             if (regions.length > 200) {
                 alert("Schwarz triangle generation failure");
+                break;
                 return {};
             }
             var t = regions[i];

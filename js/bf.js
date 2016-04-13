@@ -927,14 +927,15 @@ PolyContext.prototype.desargues2 = function(off,options) {
                 var p = findpair(i,j);
                 var q = findpair(i,k);
                 var r = findpair(j,k);
-                faces.push({ vlist: [p,q] });
-                faces.push({ vlist: [q,r] });
-                faces.push({ vlist: [r,p] });
+                var color = Color.white;
+                faces.push({ vlist: [p,q], color: color });
+                faces.push({ vlist: [q,r], color: color });
+                faces.push({ vlist: [r,p], color: color });
             }
         }
     }
     for (var i = 0; i < 5; i++) {
-        var q = new Vector4(1,0,0.01,0.01);
+        var q = new Vector4(1,0,0.005,0.01);
         q.normalize();
         qmul(q,pentatope[i],pentatope[i]);
         //var r = new Vector4(1,0.01,0,0);
@@ -943,24 +944,3 @@ PolyContext.prototype.desargues2 = function(off,options) {
     }
     return { vertices: vertices, faces: faces }
 }
-    
-         
-
-//eqtest()
-// function doit() {
-//     vertices.push([0,0,0]);
-//     for (var h = -3; h < 3; h += 0.05) {
-//         bftest(h)
-//     }
-//     //bftest(0.0001)
-//     console.log("OFF")
-//     console.log(vertices.length + " " + edges.length + " " + 0)
-//     for (var i = 0; i < vertices.length; i++) {
-//         console.log(vertices[i][0] + " " + vertices[i][1] + " " + vertices[i][2])
-//     }
-//     for (var i = 0; i < edges.length; i++) {
-//         console.log(2 + " " + edges[i][0] + " " + edges[i][1]);
-//     }
-// }
-
-//doit()

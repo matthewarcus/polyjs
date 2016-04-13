@@ -38,6 +38,7 @@
 var Clebsch = {};
 (function () {
     // Quaternion multiplication (of THREE.Vector4)
+    // Maybe we should use the Three.js ordering with w first.
     // Multiply p and q as quaternions and put the result in r.
     // r may be p or q (or both).
     function qmul(p,q,r) {
@@ -117,29 +118,31 @@ var Clebsch = {};
         green: new THREE.Color(0,1,0),
         blue: new THREE.Color(0,0,1),
         yellow: new THREE.Color(1,1,0),
-        white: new THREE.Color(1,1,1),
         cyan: new THREE.Color(0,1,1),
         magenta: new THREE.Color(1,0,1),
+        white: new THREE.Color(1,1,1),
+        black: new THREE.Color(0,0,0),
         celadon: new THREE.Color(0xace1af),
     };
     var colorschemes = [
         [Colors.red,Colors.blue,Colors.green,Colors.yellow,Colors.white,Colors.cyan,Colors.magenta],
         [Colors.celadon,Colors.celadon,Colors.celadon,Colors.celadon,Colors.red,Colors.yellow,Colors.blue],
-        [Colors.red,Colors.white,Colors.blue,Colors.white,Colors.yellow,Colors.yellow,Colors.yellow]
+        [Colors.red,Colors.white,Colors.blue,Colors.white,Colors.yellow,Colors.yellow,Colors.yellow],
+        [Colors.red,Colors.yellow,Colors.green,Colors.blue,Colors.white,Colors.white,Colors.white],
     ];
 
     var quinc = [
-        new THREE.Vector4(1,0.005,0.01,0.007),
-        new THREE.Vector4(1,0.0,0.02,0.0),
+        new THREE.Vector4(0,1,2,1.5),
+        new THREE.Vector4(0,0,1,0),
+        new THREE.Vector4(0,1,0,1),
+        new THREE.Vector4(0,0,0,1),
     ];
     for (var i = 0; i < quinc.length; i++) {
         quinc[i].normalize();
     }
 
-    // Miscellaneous (potentially) variable parameters
+    // Miscellaneous variable parameters
     var radius2;
-    //var radius2 = 4;
-
     var quincindex = 0;
     var colorscheme = 0;
     var matrixindex = 0;
@@ -206,15 +209,18 @@ var Clebsch = {};
         return x;
     }
 
-    var time = 0;
-    var morphing = true;
+    var globaltime = Date.now()/1000;
+    var lasttime = globaltime;
     
     // Surface generating functions
+    var morphing = true;
+    var morphspeed = 1;
+    var morphtime = 0;
     function morph() {
-        var a = Math.sin(time);
-        var K = 0.25 + 4*a*Math.abs(a);
-        time += 0.01;
-        
+        // Control morphing separately from the rotation.
+        if (morphing) morphtime += morphspeed * 0.1 * (globaltime - lasttime);
+        var a = Math.sin(morphtime);
+        var K = 0.25 + 2*a*Math.abs(a);
         var N = 100;
         var colors = colorschemes[colorscheme];
         // Almost the same as Clebsch, but with w parameter = K,
@@ -395,24 +401,27 @@ var Clebsch = {};
         return redraw;
     }
 
-    Clebsch.runOnWindow = function(canvas,info) {
+    Clebsch.runOnWindow = function(canvas,info,link) {
         var renderer;
         var camera;
-        var quat;
         var matrices = initmatrices();
 
+        var speed = 1;
         var running = true;
+        var runtime = 0;
 
         var infostring =
-            's/a: +/- scale, c: color scheme, m: morphing, p: projection, q: quaternion, ' +
-            'r: reset, t: type, &lt;space&gt: toggle rotation, &lt;up&gt;/&lt;down&gt;: in &amp; out, ?: toggle info';
+            's/a: +/- scale, [/]: slower/faster, c: color scheme, p: projection, q: quaternion, ' +
+            'r: reset, t: type, &lt;space&gt: toggle animation, &lt;up&gt;/&lt;down&gt;: in &amp; out, ?: toggle info';
 
         var showinfo = true;
         function setshowinfo() {
             if (showinfo) {
                 info.style.display = 'block';
+                link.style.display = 'block';
             } else {
                 info.style.display = 'none';
+                link.style.display = 'none';
             }
         }
         function processoptions(options) {
@@ -421,9 +430,7 @@ var Clebsch = {};
                 if (arg == '') return;
                 //console.log("Doing parameter '" + arg + "'");
                 var matches;
-                if (matches = arg.match(/^morphing$/)) {
-                    morphing = true;
-                } else if (matches = arg.match(/^run$/)) {
+                if (matches = arg.match(/^run$/)) {
                     running = true;
                 } else if (matches = arg.match(/^stop$/)) {
                     running = false;
@@ -435,6 +442,8 @@ var Clebsch = {};
                     surface = 1;
                 } else if (matches = arg.match(/^morph$/)) {
                     surface = 2;
+                } else if (matches = arg.match(/^morphing$/)) {
+                    morphing = true;
                 } else if (matches = arg.match(/^surface=([\d]+)$/)) {
                     surface = Number(matches[1])%surfaces.length;
                 } else if (matches = arg.match(/^projection=([\d]+)$/)) {
@@ -443,6 +452,10 @@ var Clebsch = {};
                     colorscheme = Number(matches[1])%colorschemes.length;
                 } else if (matches = arg.match(/^q=([\d]+)$/)) {
                     quincindex = Number(matches[1])%quinc.length;
+                } else if (matches = arg.match(/^speed=([\d.]+)$/)) {
+                    speed = Number(matches[1]);
+                } else if (matches = arg.match(/^radius=([\d.]+)$/)) {
+                    radius2 = (function(x){ return x*x; })(Number(matches[1]));
                 } else {
                     console.log("Unknown option " + arg);
                 }
@@ -491,11 +504,12 @@ var Clebsch = {};
                 case 'q':
                     // Change quaternion
                     quincindex = (quincindex+1)%quinc.length;
-                    quat = new THREE.Vector4(1,0,0,0);
+                    globaltime = 0;
                     break;
                 case 'r':
                     // Reset
-                    quat = new THREE.Vector4(1,0,0,0);
+                    runtime = 0;
+                    morphtime = 0;
                     break;
                 case 's':
                     // Increase object scale
@@ -510,8 +524,15 @@ var Clebsch = {};
                     showinfo = !showinfo;
                     setshowinfo();
                     break;
+                case '[':
+                    speed /= 1.05;
+                    break;
+                case ']':
+                    speed *= 1.05;
+                    break;
                 case ' ':
                     running = !running;
+                    if (running) needupdate = true;
                     event.preventDefault();
                     break;
                 }
@@ -543,20 +564,13 @@ var Clebsch = {};
 
         var controls = new THREE.OrbitControls( camera, canvas );
 
-        // A quaternion represents an (isoclinic) rotation in
-        // 4-space - effectively changing the 'plane at infinity'.
-        // Start with identity,
-        quat = new THREE.Vector4(1,0,0,0);
-        quat.normalize();
-        // and rotate the quaternion each time around the loop
-        // by multiplication with quinc.
-
         var needupdate = true;
         var scale = 1.0;
         
         // Positions are dynamic - we could do all this in the shader, but this
         // will do for now.
         var qtmp = new THREE.Vector4;
+        var quat = new THREE.Vector4;
         function setvertices() {
             for (var i = 0; i < npoints; i++) {
                 qtmp.copy(points[i]);
@@ -574,7 +588,7 @@ var Clebsch = {};
                 if (-eps < w && w < 0) w = -eps;
                 w /= scale;
                 x /= w; y /= w; z /= w;
-                if (radius2 && x*x+z*z > radius2) x = 10000;
+                if (radius2 && x*x+y*y+z*z > radius2) x = 10000;
                 vertexarray[3*i+0] = x;
                 vertexarray[3*i+1] = y;
                 vertexarray[3*i+2] = z;
@@ -595,11 +609,11 @@ var Clebsch = {};
             case 2: s += "Morphing surface: "; break;
             default: s += "<Unknown surface>: "; break;
             }
-            s += "q=[ " + format(quat.x) + " " + format(quat.y) +
+            s += "q = [ " + format(quat.x) + " " + format(quat.y) +
                 " " + format(quat.z) + " " + format(quat.w) + " ]";
             if (matrices[matrixindex]) {
                 var elements = matrices[matrixindex].elements;
-                s += " m=[";
+                s += " m = [";
                 for (var i = 0; i < elements.length; i++) {
                     s += format(elements[i]) + " ";
                 }
@@ -608,16 +622,25 @@ var Clebsch = {};
             return s;
         }
         function dorender() {
-            //console.log(npoints, points.length);
+            lasttime = globaltime;
+            globaltime = Date.now()/1000; // Time in seconds
+
+            if (running) runtime += speed * 0.1 * (globaltime - lasttime);
+
+            // A quaternion represents an (isoclinic) rotation in
+            // 4-space - effectively changing the 'plane at infinity'.
+            // This is e^theta*qinc, where quinc is a pure quaternion.
+            // We could roll this into the matrix multiplication above.
+            var cost = Math.cos(runtime*Math.PI);
+            var sint = Math.sin(runtime*Math.PI);
+            var q = quinc[quincindex];
+            quat.set(cost,sint*q.y,sint*q.z,sint*q.w);
             // Do a full render whether we need to or not.
-            setTimeout(function() { requestAnimationFrame(dorender); }, 1000 / 25 );
+            setTimeout(function() { requestAnimationFrame(dorender); }, 1000 / 20 );
             if (needupdate) {
                 needupdate = setgeometry();
             }
             setvertices();
-            if (running) {
-                qmul(quat,quinc[quincindex],quat);
-            }
             if (showinfo) info.innerHTML = infostring + '<p>' + statestring();
             renderer.render(scene, camera);
         }
