@@ -213,15 +213,26 @@ var Clebsch = {};
     var lasttime = globaltime;
     
     // Surface generating functions
+    var twirling = false;
+    var twirltime = 0;
+    var twirlcos = 1;
+    var twirlsin = 0;
+    function randompair() {
+        var x0 = randpoint();
+        var y0 = randpoint();
+        var x = twirlcos*x0 - twirlsin*y0;
+        var y = twirlsin*x0 + twirlcos*y0;
+        return [x,y];
+    }
+
     var morphing = true;
     var morphspeed = 1;
     var morphtime = 0;
-    function morph() {
+    function morph(N) {
         // Control morphing separately from the rotation.
         if (morphing) morphtime += morphspeed * 0.1 * (globaltime - lasttime);
         var a = Math.sin(morphtime);
         var K = 0.25 + 2*a*Math.abs(a);
-        var N = 100;
         var colors = colorschemes[colorscheme];
         // Almost the same as Clebsch, but with w parameter = K,
         // restricted permutations (since w is now special) and,
@@ -249,20 +260,22 @@ var Clebsch = {};
         }
         // Well, we can have these 3 lines at least.
         for (var i = 0; i < N; i++) {
-            var x = randpoint();
-            var y = randpoint();
+            var p = randompair();
+            var x = p[0];
+            var y = p[1];
             perm3(x,-x,y,0,colors[4]);
         }
         for (var i = 0; i < N*N; i++) {
-            var x1 = randpoint();
-            var x2 = randpoint();
+            var p = randompair();
+            var x = p[0];
+            var y = p[1];
             var w = 1;
-            solve(x1,x2,w);
+            solve(x,y,w);
         }
-        return morphing; // Carry on redrawing
+        return morphing || twirling; // Carry on redrawing
     }
 
-    function clebsch() {
+    function clebsch(N) {
         var colors = colorschemes[colorscheme];
         function check(x,y,z,w) {
             function cube(x) { return x*x*x; }
@@ -290,25 +303,27 @@ var Clebsch = {};
                 check(x,y,z0,w);
                 check(x,y,z1,w);
                 // All permutations of x,y,z,w are solutions,
-                perm6(x,y,z0,w,colors[0],colors[1]);
-                perm6(x,y,z1,w,colors[2],colors[3]);
+                perm3(x,y,z0,w,colors[0],colors[1]);
+                perm3(x,y,z1,w,colors[2],colors[3]);
             }
         }
-        function clebsch1(N) {
+        function clebsch1() {
             for (var i = 0; i < N*N; i++) {
-                var x1 = randpoint();
-                var x2 = randpoint();
+                var p = randompair();
+                var x = p[0];
+                var y = p[1];
                 var w = 1;
                 // Solutions for w = 0 form some of the 27 lines
                 // which we draw separately.
-                solve(x1,x2,w);
+                solve(x,y,w);
             }
         }
         // 15 lines
-        function clebsch2(N) {
+        function clebsch2() {
             for (var i = 0; i < N; i++) {
-                var x = randpoint();
-                var y = randpoint();
+                var p = randompair();
+                var x = p[0];
+                var y = p[1];
                 var color = colors[4];
                 perm6(x,-x,y,0,color);
                 perm6(x,-x,0,y,color);
@@ -319,49 +334,52 @@ var Clebsch = {};
             }
         }
         // 12 lines
-        function clebsch3(N) {
+        function clebsch3() {
             for (var i = 0; i < N; i++) {
-                var p = (1 + Math.sqrt(5))/2;
-                var x1 = randpoint();
-                var x2 = randpoint();
-                var x3 = -(x1 + p*x2);
-                var x4 = -(p*x1 + x2);
+                var p = randompair();
+                var x = p[0];
+                var y = p[1];
+                var phi = (1 + Math.sqrt(5))/2;
+                var z = -(x + phi*y);
+                var w = -(phi*x + y);
                 // Color to get a "Double Six".
-                perm6(x1,x2,x3,x4,colors[5],colors[6]);
-                perm6(x1,x2,x4,x3,colors[6],colors[5]);
+                perm6(x,y,z,w,colors[5],colors[6]);
+                perm6(x,y,w,z,colors[6],colors[5]);
             }
         }
-        var N = 100;
-        clebsch3(2*N); // 12 lines
-        clebsch2(2*N); // 15 lines
-        clebsch1(N); // Main surface
+        clebsch3(); // 12 lines
+        clebsch2(); // 15 lines
+        clebsch1(); // Main surface
+        return twirling;
     }
-    function cayley() {
+    function cayley(N) {
         var colors = colorschemes[colorscheme];
-        function cayley1(N) {
+        function cayley1() {
             for (var i = 0; i < N*N; i++) {
-                var x = randpoint();
-                var y = randpoint();
+                var p = randompair();
+                var x = p[0];
+                var y = p[1];
                 var z = 1;
                 var w = -1/(1/x + 1/y + 1/z);
-                perm6(x,y,z,w,colors[0],colors[1]);
-                perm6(x,y,w,z,colors[2],colors[3]);
+                perm3(x,y,z,w,colors[0],colors[1]);
+                perm3(x,y,w,z,colors[2],colors[3]);
             }
         }
-        function cayley2(N) {
+        function cayley2() {
             for (var i = 0; i < N; i++) {
                 var color = colors[4];
-                var x1 = randpoint();
-                var x2 = randpoint();
-                perm6(x1,x2,0,0,color,color);
-                addpoint(x1,-x1,x2,-x2,color);
-                addpoint(x1,x2,-x1,-x2,color);
-                addpoint(x2,x1,-x1,-x2,color);
+                var p = randompair();
+                var x = p[0];
+                var y = p[1];
+                perm6(x,y,0,0,color,color);
+                addpoint(x,-x,y,-y,color);
+                addpoint(x,y,-x,-y,color);
+                addpoint(y,x,-x,-y,color);
             }
         }
-        var N = 100;
-        cayley2(4*N); // 9 lines
-        cayley1(N); // Main surface
+        cayley2(); // 9 lines
+        cayley1(); // Main surface
+        return twirling;
     }
 
     var surfaces = [clebsch, cayley, morph];
@@ -371,13 +389,19 @@ var Clebsch = {};
     var colorarray;
     var geometry;
 
-    function setgeometry() {
+    function setgeometry(N) {
         npoints = 0;
-        var redraw = surfaces[surface](); // Compute points
-
         // Reset random so we get the same collection of points
         randomindex = 0;
+        // And reset twirling parameters
+        if (twirling) {
+            twirltime += globaltime-lasttime;
+            var k = 20;
+            twirlcos = Math.cos(twirltime/k);
+            twirlsin = Math.sin(twirltime/k);
+        }
 
+        var redraw = surfaces[surface](N); // Compute points
 
         // Set up buffers.
         if (!vertexarray || vertexarray.length < npoints*3) {
@@ -411,8 +435,8 @@ var Clebsch = {};
         var runtime = 0;
 
         var infostring =
-            's/a: +/- scale, [/]: slower/faster, c: color scheme, p: projection, q: quaternion, ' +
-            'r: reset, t: type, &lt;space&gt: toggle animation, &lt;up&gt;/&lt;down&gt;: in &amp; out, ?: toggle info';
+            'z/x: -/+ scale, [/]: slower/faster, c: color scheme, p: projection, q: quaternion, r: reset, ' +
+            's: surface, &lt;space&gt: rotate, t: twirl, m: morph, &lt;up&gt;/&lt;down&gt;: in &amp; out, ?: toggle info';
 
         var showinfo = true;
         function setshowinfo() {
@@ -483,7 +507,7 @@ var Clebsch = {};
                 // Ignore event if control key pressed.
                 var c = String.fromCharCode(event.charCode);
                 switch(c) {
-                case 'a':
+                case 'z':
                     // Decrease object scale
                     scale /= 1.1;
                     break;
@@ -511,11 +535,15 @@ var Clebsch = {};
                     runtime = 0;
                     morphtime = 0;
                     break;
-                case 's':
+                case 'x':
                     // Increase object scale
                     scale *= 1.1;
                     break;
                 case 't':
+                    twirling = !twirling;
+                    needupdate = true;
+                    break;
+                case 's':
                     // Change surface
                     surface = (surface+1)%surfaces.length;
                     needupdate = true;
@@ -621,24 +649,28 @@ var Clebsch = {};
             }
             return s;
         }
-        function dorender() {
-            lasttime = globaltime;
-            globaltime = Date.now()/1000; // Time in seconds
-
-            if (running) runtime += speed * 0.1 * (globaltime - lasttime);
-
+        function qrotate(q,theta,quat) {
             // A quaternion represents an (isoclinic) rotation in
             // 4-space - effectively changing the 'plane at infinity'.
             // This is e^theta*qinc, where quinc is a pure quaternion.
             // We could roll this into the matrix multiplication above.
-            var cost = Math.cos(runtime*Math.PI);
-            var sint = Math.sin(runtime*Math.PI);
-            var q = quinc[quincindex];
+            var cost = Math.cos(theta);
+            var sint = Math.sin(theta);
             quat.set(cost,sint*q.y,sint*q.z,sint*q.w);
+        }
+        function dorender() {
+            lasttime = globaltime;
+            globaltime = Date.now()/1000; // Time in seconds
+            var N = 100;
+            
+            if (running) runtime += speed * 0.1 * (globaltime - lasttime);
+
+            var q = quinc[quincindex];
+            qrotate(q,runtime*Math.PI,quat);
             // Do a full render whether we need to or not.
-            setTimeout(function() { requestAnimationFrame(dorender); }, 1000 / 20 );
+            setTimeout(function() { requestAnimationFrame(dorender); }, 1000 / 25 );
             if (needupdate) {
-                needupdate = setgeometry();
+                needupdate = setgeometry(N);
             }
             setvertices();
             if (showinfo) info.innerHTML = infostring + '<p>' + statestring();
