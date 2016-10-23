@@ -640,6 +640,7 @@ PolyContext.prototype.zoomer = (function () {
     var theta = 0;
     var types;
     return function(off,options) {
+        console.log("zoomer")
         var Color = THREE.OFFLoader.Utils.Color;
         var vmul = THREE.OFFLoader.Utils.vmul
         var vector = THREE.OFFLoader.Utils.vector
@@ -740,12 +741,12 @@ PolyContext.prototype.slerp = function(off,options) {
     var vertices = []
     var faces = []
     // We should rotate q1 with SLERP as well...
-    var q0 = new Vector4(1,0.5,1,0);
-    var qrot = new Vector4(1,0.005,0.01,-0.02);
+    var q0 = new Vector4(1,0.5,0.666,1);
+    var qrot = new Vector4(1,0.01,0.011,0.008);
     q0.normalize(); qrot.normalize();
     var q1 = options.q1;
     if (!q1) {
-        var q1 = new Vector4(0,1,0,1);
+        var q1 = new Vector4(0,1,0,0);
         q1.normalize();
         options.q1 = q1;
     }
@@ -758,7 +759,8 @@ PolyContext.prototype.slerp = function(off,options) {
     //console.log(q2);
     //console.log(dot(q0,q2));
     //console.log(dot(q1,q2));
-    var s = [ new Vector4(0,1,1,0), new Vector4(0,1,-1,0), new Vector4(0,-1,-1,0), new Vector4(0,-1,1,0) ];
+    var zz = 1;
+    var s = [ new Vector4(0,1,1,zz), new Vector4(0,1,-1,zz), new Vector4(0,-1,-1,zz), new Vector4(0,-1,1,zz) ];
     var colors = [Color.red,Color.green,Color.blue,Color.yellow];
     var N = 32;
     // A +iB is rotation by pi/N.
@@ -781,7 +783,7 @@ PolyContext.prototype.slerp = function(off,options) {
         var quat = vadd(vmul(q0,a),vmul(q2,b));
         var cquat = new Vector4(quat.x,-quat.y,-quat.z,-quat.w);
         if (0) {
-              var theta = i*Math.PI/N;
+            var theta = i*Math.PI/N;
             console.assert(Math.abs(a-Math.cos(theta)) < 1e-5);
             console.assert(Math.abs(b-Math.sin(theta)) < 1e-5);
         }
