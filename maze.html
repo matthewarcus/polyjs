@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>3D Mazes</title></head> 
+<!--
+(c) Matthew Arcus, 2016
+
+MIT Licence
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+  -->
+  <body>
+    <style>
+      body { font-family: verdana, san-serif; }
+      .outer { display: table; margin: auto; }
+      .inner { display: table-cell; width: 55em; line-height: 1.4em; }
+    </style>
+    <div class="outer">
+      <div class="inner">
+        <h2>Drawing 3D mazes with Javascript, WebGL and Three.js</h2>
+        <div style="display:inline">
+          <style>
+            canvas { background: black; }
+          </style> 
+          <script src="js/three/three.min.js"></script> 
+          <script src="js/three/OrbitControls.js"></script> 
+          <script src="js/OFFLoader.js"></script> 
+          <script src="js/geometry.js"></script> 
+          <script src="js/poly.js"></script>
+          <script src="js/maze.js"></script>
+          <script src="js/maze3.js"></script>
+          <a><canvas id="canvas1" height="640" width="800"></canvas></a>
+          <a><canvas id="canvas2" height="640" width="800"></canvas></a>
+          <a><canvas id="canvas3" height="640" width="800"></canvas></a>
+          <a><canvas id="canvas4" height="640" width="800"></canvas></a>
+          <script>
+            function run(canvas,options) {
+            var context = new PolyContext(options);
+            context.runOnCanvas(canvas,canvas.width,canvas.height);
+            canvas.parentElement.href = "poly.html?" + options;
+            }
+            run(canvas1, "off=off/geo_3_2_d.off&edgewidth=0.01&allvertices&vertexwidth=0.015&texture=images/202.jpg&xnormal=images/202_norm.jpg&colorstyle=1&function=mazify&rotate");
+            run(canvas2, "off=off/torus.off&colorstyle=1&function=mazify&allvertices&edgewidth=0.02&vertexwidth=0.03&texture=images/221.jpg&normal=images/221_norm.jpg&z=8&rotate");
+            run(canvas3, "off=off/mobius.off&function=mazify&allvertices&vertexwidth=0.03&nofaces&rotate");
+            run(canvas4, "function=maze3&alledges&allvertices&normal=images/218_norm.jpg&texture=images/218.jpg&rotate&z=5");
+          </script>
+        </div>
+        <p>
+          <a href="https://github.com/matthewarcus/polyjs/poly.js">Source on Github</a>
+          <h2>Keyboard Controls</h2>
+          <ul>
+            <li>Up arrow: move forward</li>
+            <li>Down arrow: move backward</li>
+            <li>r: rotation on/off</li>
+            <li>u: rotate colors</li>
+            <li>f: step through color styles</li>
+            <li>T: textures on/off</li>
+          </ul>
+      </div>
+    </div>
+  </body> 
+</html>

@@ -36,6 +36,7 @@
         load: function ( url, onLoad, onProgress, onError ) {
             var scope = this;
             var loader = new THREE.XHRLoader( scope.manager );
+            //var loader = new THREE.XHRLoader();
             //loader.setCrossOrigin( this.crossOrigin ); // Not in r74?
             loader.load( url, function ( text, other ) {
                 var off = scope.parse(text)
@@ -143,6 +144,9 @@
             var vsub = THREE.OFFLoader.Utils.vsub;
             var n = vsub(v2,v0);
             n.cross(vsub(v1,v0));
+            // This isn't a good idea if v0,v1,v2 are small
+            // maybe normalize first.
+            //if (n.length() < 1e-4) return null;
             n.normalize();
             return n;
         },
@@ -357,6 +361,7 @@
         var vadd = THREE.OFFLoader.Utils.vadd
         var vsub = THREE.OFFLoader.Utils.vsub
         var vdiv = THREE.OFFLoader.Utils.vdiv
+        var vdist = THREE.OFFLoader.Utils.vdist
         var vmul = THREE.OFFLoader.Utils.vmul
         var vdot = THREE.OFFLoader.Utils.vdot
         var vcross = THREE.OFFLoader.Utils.vcross
@@ -595,7 +600,11 @@
                     for (var i = 0; i < n; i++) {
                         var v1 = vertices[vlist[i]];
                         var v2 = vertices[vlist[(i+1)%n]];
-                        normal.add(makenormal(centroid,v2,v1)); // Note order
+                        // If triangle degenerate, don't contribute to normal
+                        var normal1 = makenormal(centroid,v2,v1);
+                        if (normal1) {
+                            normal.add(normal1); // Note order
+                        }
                     }
                     normal.normalize();
                     if (reversefaces) normal.negate();

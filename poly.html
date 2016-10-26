@@ -7,6 +7,18 @@
       * { border: 0; padding: 0; margin: 0; }
       canvas { width: 100%; height: 100%; background: black; }
       body { overflow: hidden; }
+      #info,#link {
+      position: absolute;
+      text-align:center;
+      font-size: small;
+      font-family: verdana,san-serif;
+      color: white;
+      }
+      #info { top: 0px; width: 100%; }
+      #link { bottom: 0px; width: 100%; }
+      a {
+      color: cyan;
+      }
     </style> 
   </head> 
   <body> 
@@ -17,10 +29,14 @@
     <script src="js/poly.js"></script>
     <script src="js/bf.js"></script>
     <script src="js/hyper.js"></script>
+    <script src="js/maze.js"></script>
+    <script src="js/maze3.js"></script>
+    <div id="link"><a href="http://matthewarcus.github.io/polyjs/">http://matthewarcus.github.io/polyjs/</a></div>
+    <div id="info"></div>
     <canvas id="canvas1"></canvas>
     <script>
       window.onload = function() {
-      PolyContext.runOnWindow(canvas1);
+      PolyContext.runOnWindow(canvas1,info,link);
       }
     </script>
 </body> 

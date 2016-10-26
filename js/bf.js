@@ -640,7 +640,6 @@ PolyContext.prototype.zoomer = (function () {
     var theta = 0;
     var types;
     return function(off,options) {
-        console.log("zoomer")
         var Color = THREE.OFFLoader.Utils.Color;
         var vmul = THREE.OFFLoader.Utils.vmul
         var vector = THREE.OFFLoader.Utils.vector

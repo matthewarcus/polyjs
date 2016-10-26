@@ -1370,6 +1370,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height,mainwindow) {
 
     var rotationx = 0
     var rotationy = 0
+    var clock = new THREE.Clock();
     this.render = function (tstamp) {
         var geometry = mesh.geometry
         if (needupdate == PolyContext.UpdateNone) return;
@@ -1379,6 +1380,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height,mainwindow) {
         // We should be able to optimize just updating colors, at least for OFF models.
         if (needupdate == PolyContext.UpdateModel || needupdate == PolyContext.UpdateColors) {
             if (isoff) {
+                context.offdata = context.offdata || {}
                 var off = context.offdata
                 var options = context.offoptions
                 for (var i = 0; i < context.fnames.length; i++) {
@@ -1466,7 +1468,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height,mainwindow) {
 }
 
 // Static function, direct member of PolyContext.
-PolyContext.runOnWindow = function(canvas) {
+PolyContext.runOnWindow = function(canvas,info,link) {
     var options = window.location.search;
     if (options.length > 0) {
         // Strip off leading '?'
@@ -1480,6 +1482,23 @@ PolyContext.runOnWindow = function(canvas) {
     var width = window.innerWidth;
     var height = window.innerHeight;
     var context = new PolyContext(options);
+
+    var showinfo = true;
+    function setshowinfo() {
+        if (showinfo) {
+            info.style.display = 'block';
+            link.style.display = 'block';
+        } else {
+            info.style.display = 'none';
+            link.style.display = 'none';
+        }
+    }
+    var infostring =
+        'r: rotation, c: compound, z: z rotation, a: reset z rotation, ' +
+        '&lt;space&gt;: transform, f: colorstyle, u/v: color, T: texture'
+    
+    info.innerHTML = infostring;
+    setshowinfo();
     window.addEventListener("resize", function() {
         if (context.renderer) {
             var w = window.innerWidth;
@@ -1494,7 +1513,18 @@ PolyContext.runOnWindow = function(canvas) {
                             function (event) {
                                 if (!event.ctrlKey) {
                                     // Ignore event if control key pressed.
-                                    var handled = context.handleKey(String.fromCharCode(event.charCode));
+                                    var c = String.fromCharCode(event.charCode)
+                                    var handled = false;
+                                    switch(c) {
+                                    case '?':
+                                        showinfo = !showinfo;
+                                        setshowinfo();
+                                        handled = true;
+                                        break;
+                                    default:
+                                        handled = context.handleKey(c);
+                                        break;
+                                    }
                                     if (handled) event.preventDefault();
                                 }
                             },

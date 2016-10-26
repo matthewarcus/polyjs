@@ -41,14 +41,15 @@ THE SOFTWARE.
           <script src="js/OFFLoader.js"></script> 
           <script src="js/geometry.js"></script> 
           <script src="js/poly.js"></script>
-          <canvas id="canvas1" height="400" width="400"></canvas> 
-          <canvas id="canvas2" height="400" width="400"></canvas>
-          <canvas id="canvas3" height="400" width="400"></canvas>
-          <canvas id="canvas4" height="400" width="400"></canvas>
+          <a><canvas id="canvas1" height="400" width="400"></canvas></a>
+          <a><canvas id="canvas2" height="400" width="400"></canvas></a>
+          <a><canvas id="canvas3" height="400" width="400"></canvas></a>
+          <a><canvas id="canvas4" height="400" width="400"></canvas></a>
           <script>
             function run(canvas,options) {
             var context = new PolyContext(options);
             context.runOnCanvas(canvas,canvas.width,canvas.height);
+            canvas.parentElement.href = "poly.html?" + options;
             }
             run(canvas1, "args=3:5/3:2&sym=3:2:2&colorstyle=1&t=7&rotate&run");
             run(canvas2, "args=3:2:5/3&colorstyle=3&z=8&t=7&dual&rotate&run");
