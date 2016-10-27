@@ -1,6 +1,30 @@
+"use strict";
+
+// The MIT License (MIT)
+
+// Copyright (c) 2016 Matthew Arcus
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
 // Take a polyhedron (should be connected with at most 2 faces meeting
 // at an edge) described in OFF format, compute graph topology and use
-// thingies algorithm to generate a set of edges defining a spanning
+// Kruskal's algorithm to generate a set of edges defining a spanning
 // tree for the dual graph; ie. a maze.
 
 PolyContext.prototype.mazify = function(off,options) {
@@ -72,7 +96,7 @@ PolyContext.prototype.mazify = function(off,options) {
     }
 
     // Construct maze: a straightforward
-    // implementation of thingies algorithm
+    // implementation of Kruskal's algorithm
     for (var i = 0; i < walls.length; i++) {
         var j = i + random(walls.length - i)
         // Select a random wall to consider.
