@@ -1494,7 +1494,7 @@ PolyContext.runOnWindow = function(canvas,info,link) {
         }
     }
     var infostring =
-        '&lt;mouse drag&gt;: orbital controls, &lt;up&gt;/&lt;down&gt;: move in/out, r: rotation, f: colorstyle'
+        '&lt;mouse drag&gt;: orbital controls, &lt;up&gt;/&lt;down&gt;: move in/out, r: rotation, f: colorstyle, ?: info display'
     
     info.innerHTML = infostring;
     setshowinfo();

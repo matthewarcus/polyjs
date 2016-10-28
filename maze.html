@@ -75,25 +75,25 @@ THE SOFTWARE.
             <a href="http://antiprism.com/">Antiprism</a>, used here
             to generate models for a (dual) geodesic sphere, a torus
             and a Möbius strip.
-          <p>(Click on a pane for a larger, more interactive view. Controls are:</p>
+          <p>Click on a pane for an expanded, more interactive
+          view. Controls for the expanded view are:</p>
           <ul>
             <li>Mouse drag: Orbit controls</li>
-            <li>Up arrow: move forward</li>
-            <li>Down arrow: move backward</li>
+            <li>Up/down: move forward/back</li>
             <li>r: rotation on/off</li>
             <li>f: step through color styles</li>
-            <li>u: rotate colors</li>
+            <li>?: info display on/off</li>
           </ul>
           <p><a><canvas id="canvas2" height="640" width="800"></canvas></a></p>
           <p><a><canvas id="canvas3" height="640" width="800"></canvas></a></p>
           <h3>A real 3D maze</h3>
           <p>
-            <a href="https://github.com/matthewarcus/polyjs/blob/gh-pages/js/maze.js">
+            <a href="https://github.com/matthewarcus/polyjs/blob/gh-pages/js/maze3.js">
               maze3.js
             </a>
           <p>
           Alternatively, we can construct a true 3d maze. Here we
-          generate the underlying topology directly with some Javascript:
+          generate the underlying geometry directly with some Javascript:
           <p><a><canvas id="canvas4" height="640" width="800"></canvas></a></p>
           <script>
             function run(canvas,options) {
@@ -107,9 +107,9 @@ THE SOFTWARE.
             run(canvas4, "function=maze3&alledges&allvertices&normal=images/218_norm.jpg&texture=images/218.jpg&rotate&z=5");
           </script>
         </div>
-        <p> This is all based on a Three.js based framework I've been
-        playing around with for drawing polyhedra and other geometric
-        objects:
+        <p> This is all using a framework I've been experimenting with,
+          based on <a href="https://threejs.org/">Three.js</a>, for
+          drawing polyhedra and other geometric objects:
         <p><a href="http://matthewarcus.github.io/polyjs/">http://matthewarcus.github.io/polyjs/</a>
         <p><a href="https://github.com/matthewarcus/polyjs/">https://github.com/matthewarcus/polyjs/</a>
       </div>

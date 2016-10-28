@@ -27,7 +27,8 @@
 PolyContext.prototype.maze3 = function (off,options) {
     console.log("3D maze");
     if (off.mazified) return;
-    
+
+    // Set dimensions
     var dimx = options.dimx || 5;
     var dimy = options.dimy || 4;
     var dimz = options.dimz || 3;
@@ -36,10 +37,12 @@ PolyContext.prototype.maze3 = function (off,options) {
     var regions = []
     for (var i = 0; i < dimx*dimy*dimz; i++) regions[i] = i;
 
+    // Cell coordinates to cell index
     function cell(x,y,z) {
         return x + dimx*(y + dimy*z)
     }
 
+    // Cell index to cell coordinates
     function coords(n) {
         var x = n%dimx
         var t = Math.floor(n/dimx)
@@ -49,7 +52,7 @@ PolyContext.prototype.maze3 = function (off,options) {
         return [x,y,z]
     }
 
-    // Union find
+    // Union find to keep track of merged regions
     function region(n) {
         if (n == regions[n]) return n;
         var r = region(regions[n])
@@ -61,10 +64,12 @@ PolyContext.prototype.maze3 = function (off,options) {
         return Math.floor(Math.random() * n)
     }
 
+    // Build up list of interior walls.
     for (var x = 0; x < dimx; x++) {
         for (var y = 0; y < dimy; y++) {
             for (var z = 0; z < dimz; z++) {
                 var n = cell(x,y,z)
+                // [cell1,cell2,orientation]
                 if (x < dimx-1) walls.push([n,cell(x+1,y,z),0])
                 if (y < dimy-1) walls.push([n,cell(x,y+1,z),1])
                 if (z < dimz-1) walls.push([n,cell(x,y,z+1),2])
@@ -97,10 +102,10 @@ PolyContext.prototype.maze3 = function (off,options) {
     function addvertex(x,y,z) {
         vertices.push(vector(x-dimx/2,y-dimy/2,z-dimz/2));
     }
-
     function addface(vlist,color) {
         faces.push({ vlist: vlist, color: color })
     }
+    // Construct actual 3-d geometry.
     for (var i = 0; i < maze.length; i++) {
         var n = maze[i][0]
         var m = maze[i][1]
@@ -108,21 +113,24 @@ PolyContext.prototype.maze3 = function (off,options) {
         var x = c[0]
         var y = c[1]
         var z = c[2]
-        var vbase = vertices.length
+        var vbase = vertices.length // Base offset for vertices
+        // Wall vertices are moved inwards by eps to make a small
+        // gap around the edges.
         var eps = 0.1
-        if (maze[i][2] == 0) {
+        var orientation = maze[i][2]
+        if (orientation == 0) {
             addvertex(x+1,y+eps,z+eps)
             addvertex(x+1,y+1-eps,z+eps)
             addvertex(x+1,y+1-eps,z+1-eps)
             addvertex(x+1,y+eps,z+1-eps)
             addface([vbase,vbase+1,vbase+2,vbase+3],color1)
-        } else if (maze[i][2] == 1){
+        } else if (orientation == 1){
             addvertex(x+eps,y+1,z+eps)
             addvertex(x+1-eps,y+1,z+eps)
             addvertex(x+1-eps,y+1,z+1-eps)
             addvertex(x+eps,y+1,z+1-eps)
             addface([vbase,vbase+1,vbase+2,vbase+3],color2)
-        } else if (maze[i][2] == 2){
+        } else if (orientation == 2){
             addvertex(x+eps,y+eps,z+1)
             addvertex(x+eps,y+1-eps,z+1)
             addvertex(x+1-eps,y+1-eps,z+1)
