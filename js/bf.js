@@ -1,3 +1,5 @@
+"use strict"
+
 PolyContext.prototype.loadbf = function(off,options) {
     var vector = THREE.OFFLoader.Utils.vector
     var vnegate = THREE.OFFLoader.Utils.vnegate
@@ -945,3 +947,187 @@ PolyContext.prototype.desargues2 = function(off,options) {
     }
     return { vertices: vertices, faces: faces }
 }
+
+PolyContext.prototype.tughra = function(off,options) {
+    let A = 1, B = 1, C = 1;
+    let D = 1, E = 1, F = 1;
+    let G = 1, H = 1, I = 1;
+    let J = 3;
+    let N = 1000;
+    if (options.A != undefined) A = options.A;
+    if (options.B != undefined) B = options.B;
+    if (options.C != undefined) C = options.C;
+    if (options.D != undefined) D = options.D;
+    if (options.E != undefined) E = options.E;
+    if (options.F != undefined) F = options.F;
+    if (options.G != undefined) G = options.G;
+    if (options.H != undefined) H = options.H;
+    if (options.I != undefined) I = options.I;
+    if (options.J != undefined) J = options.J;
+    if (options.N != undefined) N = options.N;
+
+    var vector = THREE.OFFLoader.Utils.vector
+    const sin = Math.sin;
+    const cos = Math.cos;
+    const vertices = [];
+    const vlist = [];
+    let x0 = 0, y0 = 0; z0 = 0;
+    for (let i = 0; i < N; i++) {
+        let theta0 = 2*Math.PI*i/N, theta = theta0;
+        let x = 0, y = 0, z = 0;
+        // For LR-symmetry, want x(-theta) = -x(theta), yz(-theta) = yz(theta)
+        // So x should have odd powers of sin(n*theta)
+        // y and z should have even powers of sin(n*theta)
+        for (let j = 1; j <= J; j++) {
+            // Could use eg. B*y*sin(theta) here, etc.
+            let x1 = A*x + B*sin(theta) + C*sin(theta)*cos(theta);
+            let y1 = D*y + E*cos(theta) + F*cos(theta)*cos(theta);
+            let z1 = G*z + H*cos(theta) + I*sin(theta)*sin(theta);
+            x = x1; y = y1; z = z1;
+            theta += theta;
+        }
+        vertices.push(vector(x,y,z));
+        x0 += x; y0 += y; z0 += z;
+        vlist.push(i);
+    }
+    x0 /= N; y0 /= N; z0 /= N; 
+    for (let i = 0; i < N; i++) {
+        vertices[i].x -= x0;
+        vertices[i].y -= y0;
+        vertices[i].z -= z0;
+    }
+    return { vertices: vertices, faces: [{ vlist: vlist }] }
+}
+
+PolyContext.prototype.origami = function(off,options) {
+    var vector = THREE.OFFLoader.Utils.vector
+    var add = THREE.OFFLoader.Utils.vadd
+    var sub = THREE.OFFLoader.Utils.vsub
+    var mul = THREE.OFFLoader.Utils.vmul
+    var dot = THREE.OFFLoader.Utils.vdot
+    var cross = THREE.OFFLoader.Utils.vcross
+    var dist = THREE.OFFLoader.Utils.vdist
+    function length(v) { return Math.sqrt(dot(v,v)); }
+    function solve1(a,b,j,k,r) {
+        // Solve v.a = j, v.b = k, |v| = r
+        var c = cross(a,b)
+        // Find A,B,C such that v = Aa + Bb + Cc
+        // v.a = A*aa + B*ab = j
+        // v.b = A*ab + B*bb = k
+        // A = (j - B*ab)/aa
+        // (j - B*ab)*ab/aa + B*bb = k
+        // (j - B*ab)*ab + B*bb*aa = k*aa
+        // j*ab - B*ab*ab + B*bb*aa = k*aa
+        // B(bb*aa - ab*ab) = k*aa - j*ab 
+        // A = (j - B*ab)/aa
+        //console.log(c)
+        if (length(c) < 1e-4) {
+            console.log("cross(a,b) vanishes " + a + b);
+            return;
+        }
+        var aa = dot(a,a)
+        var bb = dot(b,b)
+        var cc = dot(c,c)
+        var ab = dot(a,b)
+        //console.log("Params1:", aa,bb,cc,ab)
+        var B = (k*aa-j*ab)/(bb*aa - ab*ab)
+        var A = (j - B*ab)/aa
+        // v.v = aa + 2ab + bb + cc (since c orthogonal to a and b)
+        var C2 = (r*r - A*A*aa - 2*A*B*ab - B*B*bb)/cc;
+        //var v = add(mul(a,A),mul(b,B));
+        //console.log("Params2:", A,B,C2);
+        if (C2 < -1e-3) {
+            console.log("# impossible length: ", C2);
+            return;
+        } else if (C2 < 0) {
+            C2 = 0;
+        }
+        var C = Math.sqrt(C2);
+        var v = add(mul(a,A),add(mul(b,B),mul(c,C)));
+        //console.log("Result:", v,dot(v,a),j,dot(v,b),k,length(v),r);
+        return v;
+    }
+
+    function fold0(A,B,a,b,r) {
+        // Find P such that |P-A| = a, |P-B| = b, |P| = r
+        // P.P = rr
+        // (P-A).(P-A) = P.P - 2A.P + A.A = aa
+        // A.P = 0.5*(rr + AA - aa)
+        // B.P = 0.5*(rr + BB - bb)
+        const P = solve1(A,B,
+                         0.5*(r*r + dot(A,A) - a*a),
+                         0.5*(r*r + dot(B,B) - b*b),
+                         r);
+        //console.log(A,B,P);
+        if (P) {
+            const eps = 1e-3;
+            console.assert(Math.abs(dist(P,A)-a) < eps);
+            console.assert(Math.abs(dist(P,B)-b) < eps);
+            console.assert(length(P)-r < eps);
+        }
+        return P;
+    }
+
+    function fold(A,B,C,a,b,c) {
+        // return P such that |P-A| = a, etc.
+        const P = fold0(sub(A,C),sub(B,C),a,b,c);
+        if (P) return add(C,P);
+    }
+    function makefold(t) {
+        const vertices = []
+        const faces = []
+        const k = Math.sqrt(2);
+        const j = 1/Math.cos(Math.PI/8);
+        const m = Math.tan(Math.PI/8);
+        //console.log("# ",j*j,m*m+1);
+        if (Math.abs(t) < 1e-2) t = 1e-2;
+        const y = 0;
+        const A = vector(0,y,0) // 0
+        const B = vector(t,y,0) // 1
+        const C = vector(0,y,t) // 2
+        const O = fold(B,A,C,k,k,k); // 3
+        const D = fold(C,O,A,j,1-m,j); // 4
+        const E = fold(A,O,B,j,1-m,j); // 5
+        const F = fold(A,D,C,1,m,1); // 6
+        const G = fold(B,E,A,1,m,1); // 7
+        function vertex(v) {
+            //console.log(v[0],v[1],v[2]);
+            vertices.push(v);
+        }
+        function face(p,q,r) {
+            faces.push({ vlist:[p,q,r] });
+        }
+        function point(n,r,g,b) {
+            faces.push({ vlist:[n], color: new THREE.Color(r,g,b) });
+            //console.log(1,n,r,g,b);
+        }
+        //console.log("#",fold([t,0,0],[0,t,0],[0,0,0],k,k,k));
+        //console.log("OFF");
+        //console.log("8 16 0");
+        vertex(A); vertex(B); vertex(C);
+        vertex(O); vertex(D); vertex(E); vertex(F); vertex(G);
+        //console.log("# ", dist(A,O), dist(B,O), dist(A,B));
+        //console.log("# ", dist(O,D), dist(D,F));
+        face(0,6,4);
+        face(0,4,3);
+        face(0,5,3);
+        face(0,7,5);
+        face(2,4,6);
+        face(2,3,4);
+        face(1,3,5);
+        face(1,5,7);
+        point(0,1,0,0);
+        point(1,0,1,0);
+        point(2,0,0,1);
+        point(3,1,1,0);
+        point(4,0,1,1);
+        point(5,1,0,1);
+        point(6,1,1,1);
+        point(7,0.5,0.5,0.5);
+        return { vertices: vertices, faces: faces }
+    }
+    const t = options.t || 0;
+    options.t = t + 0.01;
+    return makefold(2*Math.sin(t));
+}
+
