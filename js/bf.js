@@ -1128,6 +1128,6 @@ PolyContext.prototype.origami = function(off,options) {
     }
     const t = options.t || 0;
     options.t = t + 0.01;
-    return makefold(2*Math.sin(t));
+    return makefold(1+Math.sin(t));
 }
 
