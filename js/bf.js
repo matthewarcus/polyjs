@@ -1081,7 +1081,7 @@ PolyContext.prototype.origami = function(off,options) {
         const m = Math.tan(Math.PI/8);
         //console.log("# ",j*j,m*m+1);
         if (Math.abs(t) < 1e-2) t = 1e-2;
-        const y = 0;
+        const y = -0.3;
         const A = vector(0,y,0) // 0
         const B = vector(t,y,0) // 1
         const C = vector(0,y,t) // 2
