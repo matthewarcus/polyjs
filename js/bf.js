@@ -1008,8 +1008,9 @@ PolyContext.prototype.origami = function(off,options) {
     var cross = THREE.OFFLoader.Utils.vcross
     var dist = THREE.OFFLoader.Utils.vdist
     function length(v) { return Math.sqrt(dot(v,v)); }
-    function solve1(a,b,j,k,r) {
+    function solve1(a,b,j,k,r,parity) {
         // Solve v.a = j, v.b = k, |v| = r
+        parity = parity || 1
         var c = cross(a,b)
         // Find A,B,C such that v = Aa + Bb + Cc
         // v.a = A*aa + B*ab = j
@@ -1042,13 +1043,13 @@ PolyContext.prototype.origami = function(off,options) {
         } else if (C2 < 0) {
             C2 = 0;
         }
-        var C = Math.sqrt(C2);
+        var C = parity*Math.sqrt(C2);
         var v = add(mul(a,A),add(mul(b,B),mul(c,C)));
         //console.log("Result:", v,dot(v,a),j,dot(v,b),k,length(v),r);
         return v;
     }
 
-    function fold0(A,B,a,b,r) {
+    function fold0(A,B,a,b,r,parity) {
         // Find P such that |P-A| = a, |P-B| = b, |P| = r
         // P.P = rr
         // (P-A).(P-A) = P.P - 2A.P + A.A = aa
@@ -1057,7 +1058,7 @@ PolyContext.prototype.origami = function(off,options) {
         const P = solve1(A,B,
                          0.5*(r*r + dot(A,A) - a*a),
                          0.5*(r*r + dot(B,B) - b*b),
-                         r);
+                         r, parity);
         //console.log(A,B,P);
         if (P) {
             const eps = 1e-3;
@@ -1068,32 +1069,48 @@ PolyContext.prototype.origami = function(off,options) {
         return P;
     }
 
-    function fold(A,B,C,a,b,c) {
+    const vertices = []
+    const faces = []
+    function fold(A,B,C,a,b,c,parity) {
+        A = vertices[A];
+        B = vertices[B];
+        C = vertices[C];
         // return P such that |P-A| = a, etc.
-        const P = fold0(sub(A,C),sub(B,C),a,b,c);
+        const P = fold0(sub(A,C),sub(B,C),a,b,c,parity);
         if (P) return add(C,P);
     }
-    function makefold(t) {
-        const vertices = []
-        const faces = []
+    function makefold(t,parity) {
         const k = Math.sqrt(2);
         const j = 1/Math.cos(Math.PI/8);
         const m = Math.tan(Math.PI/8);
         //console.log("# ",j*j,m*m+1);
         if (Math.abs(t) < 1e-2) t = 1e-2;
-        const y = -0.3;
-        const A = vector(0,y,0) // 0
-        const B = vector(t,y,0) // 1
-        const C = vector(0,y,t) // 2
-        const O = fold(B,A,C,k,k,k); // 3
-        const D = fold(C,O,A,j,1-m,j); // 4
-        const E = fold(A,O,B,j,1-m,j); // 5
-        const F = fold(A,D,C,1,m,1); // 6
-        const G = fold(B,E,A,1,m,1); // 7
+        const x = -0.25;
         function vertex(v) {
             //console.log(v[0],v[1],v[2]);
-            vertices.push(v);
+            console.assert(v);
+            if (v) {
+                const index = vertices.length;
+                vertices.push(v);
+                return index;
+            } else {
+                return 0;
+            }
         }
+        const A = vertex(vector(t,x,t)) // 0
+        const B = vertex(vector(-t,x,t)) // 1
+        const C = vertex(vector(t,x,-t)) // 2
+        const O = vertex(fold(B,A,C,k,k,k,parity)); // 3
+        const D = vertex(fold(C,O,A,j,1-m,j)); // 4
+        const E = vertex(fold(A,O,B,j,1-m,j)); // 5
+        const F = vertex(fold(A,D,C,1,m,1)); // 6
+        const G = vertex(fold(B,E,A,1,m,1)); // 7
+        //const H = fold(C,O,B,k,k,k,parity); // 8
+        const H = vertex(vector(-t,x,-t)); //fold(C,O,B,k,k,k,parity); // 8
+        const I = vertex(fold(B,O,H,j,1-m,j)); // 9
+        const J = vertex(fold(H,O,C,j,1-m,j)); // 10
+        const K = vertex(fold(H,I,B,1,m,1)); // 11
+        const L = vertex(fold(C,J,H,1,m,1)); // 12
         function face(p,q,r) {
             faces.push({ vlist:[p,q,r] });
         }
@@ -1104,8 +1121,6 @@ PolyContext.prototype.origami = function(off,options) {
         //console.log("#",fold([t,0,0],[0,t,0],[0,0,0],k,k,k));
         //console.log("OFF");
         //console.log("8 16 0");
-        vertex(A); vertex(B); vertex(C);
-        vertex(O); vertex(D); vertex(E); vertex(F); vertex(G);
         //console.log("# ", dist(A,O), dist(B,O), dist(A,B));
         //console.log("# ", dist(O,D), dist(D,F));
         face(0,6,4);
@@ -1116,6 +1131,14 @@ PolyContext.prototype.origami = function(off,options) {
         face(2,3,4);
         face(1,3,5);
         face(1,5,7);
+        face(O,C,J);
+        face(O,J,H);
+        face(O,H,I);
+        face(O,I,B);
+        face(J,C,L);
+        face(J,L,H);
+        face(I,H,K);
+        face(I,K,B);
         point(0,1,0,0);
         point(1,0,1,0);
         point(2,0,0,1);
@@ -1124,10 +1147,15 @@ PolyContext.prototype.origami = function(off,options) {
         point(5,1,0,1);
         point(6,1,1,1);
         point(7,0.5,0.5,0.5);
+        point(8,1,0.5,0);
+        point(9,1,1,0.5);
+        point(10,0.5,0,1);
+        point(11,0,0.5,1);
+        point(12,1,0,0.5);
         return { vertices: vertices, faces: faces }
     }
     const t = options.t || 0;
-    options.t = t + 0.01;
-    return makefold(1+Math.sin(t));
+    options.t = t + 0.015;
+    return makefold(0.5*(1+Math.cos(t)));
 }
 
