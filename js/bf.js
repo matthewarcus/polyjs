@@ -948,7 +948,7 @@ PolyContext.prototype.desargues2 = function(off,options) {
     return { vertices: vertices, faces: faces }
 }
 
-PolyContext.prototype.tughra = function(off,options) {
+PolyContext.prototype.bow = function(off,options) {
     let A = 1, B = 1, C = 1;
     let D = 1, E = 1, F = 1;
     let G = 1, H = 1, I = 1;
@@ -971,7 +971,7 @@ PolyContext.prototype.tughra = function(off,options) {
     const cos = Math.cos;
     const vertices = [];
     const vlist = [];
-    let x0 = 0, y0 = 0; z0 = 0;
+    let x0 = 0, y0 = 0, z0 = 0;
     for (let i = 0; i < N; i++) {
         let theta0 = 2*Math.PI*i/N, theta = theta0;
         let x = 0, y = 0, z = 0;
