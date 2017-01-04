@@ -948,7 +948,7 @@ PolyContext.prototype.desargues2 = function(off,options) {
     return { vertices: vertices, faces: faces }
 }
 
-PolyContext.prototype.tughra = function(off,options) {
+PolyContext.prototype.bow = function(off,options) {
     let A = 1, B = 1, C = 1;
     let D = 1, E = 1, F = 1;
     let G = 1, H = 1, I = 1;
@@ -971,7 +971,10 @@ PolyContext.prototype.tughra = function(off,options) {
     const cos = Math.cos;
     const vertices = [];
     const vlist = [];
-    let x0 = 0, y0 = 0; z0 = 0;
+    const t = options.t || 0;
+    options.t = t + 0.025;
+
+    let x0 = 0, y0 = 0, z0 = 0;
     for (let i = 0; i < N; i++) {
         let theta0 = 2*Math.PI*i/N, theta = theta0;
         let x = 0, y = 0, z = 0;
@@ -980,9 +983,12 @@ PolyContext.prototype.tughra = function(off,options) {
         // y and z should have even powers of sin(n*theta)
         for (let j = 1; j <= J; j++) {
             // Could use eg. B*y*sin(theta) here, etc.
-            let x1 = A*x + B*sin(theta) + C*sin(theta)*cos(theta);
-            let y1 = D*y + E*cos(theta) + F*cos(theta)*cos(theta);
-            let z1 = G*z + H*cos(theta) + I*sin(theta)*sin(theta);
+            const K = (j > 1) ? sin(t+j) : 1;
+            const L = (j > 1) ? sin(1.1*t+j) : 1;
+            const M = (j > 1) ? sin(1.2*t+j) : 1;
+            let x1 = A*x + K*(B*sin(theta) + C*sin(theta)*cos(theta));
+            let y1 = D*y + L*(E*cos(theta) + F*cos(theta)*cos(theta));
+            let z1 = G*z + M*(H*cos(theta) + I*sin(theta)*sin(theta));
             x = x1; y = y1; z = z1;
             theta += theta;
         }
