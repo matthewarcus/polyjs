@@ -68,48 +68,54 @@ var Clebsch = {};
     function initmatrices() {
         var matrices = []
         matrices.push(null);
-        // The "classic" Clebsch view.
-        var k = 4 // Vertical elongation
-        var l = 3 // Size of passages - smaller is larger
-        var m = new THREE.Matrix4;
-        var n = new THREE.Matrix4;
-        m.set(Math.cos(Math.PI/3),Math.sin(Math.PI/3),-1,0,
-              -Math.sin(Math.PI/3),Math.cos(Math.PI/3),0,0,
-              k, k, k, 0,
-              -l, -l, -l, l);
-        n.set(1,0,0,0, 0,0,1,0, 0,1,0,0, 0,0,0,1);
-        n.multiply(m);
-        matrices.push(n);
-
-        // Vertical rotation
-        var m = new THREE.Matrix4;
-        var n = new THREE.Matrix4;
-        m.set(Math.cos(Math.PI/4),-Math.sin(Math.PI/4), 0, 0,
-              Math.sin(Math.PI/4),Math.cos(Math.PI/4), 0, 0,
-              0, 0, 1, 0,
-              0, 0, 0, 1)
-        n.set(1,0,0,0,
-              0,Math.cos(Math.PI/6),Math.sin(Math.PI/6), 0,
-              0,-Math.sin(Math.PI/6),Math.cos(Math.PI/6), 0,
-              0,0,0,1);
-        n.multiply(m);
-        matrices.push(n);
-
-        var m = new THREE.Matrix4;
-        var k = 0.5;
-        m.set(1,0,0,0, 0,1,0,0, 0,0,1,0, -k,-k,-k,k);
-        m.getInverse(m);
-        matrices.push(m);
-
-        var m = new THREE.Matrix4;
-        m.set(-1,1,1,1, 1,-1,1,1, 1,1,-1,1, -1,-1,-1, 1);
-        m.getInverse(m);
-        matrices.push(m);
-
-        var m = new THREE.Matrix4;
-        m.set(-1,1,1,1, 1,-1,1,1, 1,1,-1,1, 1,1,1,-1);
-        m.getInverse(m);
-        matrices.push(m);
+        {
+            // The "classic" Clebsch view.
+            var k = 4 // Vertical elongation
+            var l = 3 // Size of passages - smaller is larger
+            var m = new THREE.Matrix4;
+            var n = new THREE.Matrix4;
+            m.set(Math.cos(Math.PI/3),Math.sin(Math.PI/3),-1,0,
+                  -Math.sin(Math.PI/3),Math.cos(Math.PI/3),0,0,
+                  k, k, k, 0,
+                  -l, -l, -l, l);
+            n.set(1,0,0,0, 0,0,1,0, 0,1,0,0, 0,0,0,1);
+            n.multiply(m);
+            matrices.push(n);
+        }
+        {
+            // Vertical rotation
+            var m = new THREE.Matrix4;
+            var n = new THREE.Matrix4;
+            m.set(Math.cos(Math.PI/4),-Math.sin(Math.PI/4), 0, 0,
+                  Math.sin(Math.PI/4),Math.cos(Math.PI/4), 0, 0,
+                  0, 0, 1, 0,
+                  0, 0, 0, 1)
+            n.set(1,0,0,0,
+                  0,Math.cos(Math.PI/6),Math.sin(Math.PI/6), 0,
+                  0,-Math.sin(Math.PI/6),Math.cos(Math.PI/6), 0,
+                  0,0,0,1);
+            n.multiply(m);
+            matrices.push(n);
+        }
+        {
+            var m = new THREE.Matrix4;
+            var k = 0.5;
+            m.set(1,0,0,0, 0,1,0,0, 0,0,1,0, -k,-k,-k,k);
+            m.getInverse(m);
+            matrices.push(m);
+        }
+        {
+            var m = new THREE.Matrix4;
+            m.set(-1,1,1,1, 1,-1,1,1, 1,1,-1,1, -1,-1,-1, 1);
+            m.getInverse(m);
+            matrices.push(m);
+        }
+        {
+            var m = new THREE.Matrix4;
+            m.set(-1,1,1,1, 1,-1,1,1, 1,1,-1,1, 1,1,1,-1);
+            m.getInverse(m);
+            matrices.push(m);
+        }
         return matrices;
     };
 
@@ -135,7 +141,7 @@ var Clebsch = {};
         new THREE.Vector4(0,1,2,1.5),
         new THREE.Vector4(0,0,1,0),
         new THREE.Vector4(0,1,0,1),
-        new THREE.Vector4(0,0,0,1),
+        new THREE.Vector4(0,1,0,0),
     ];
     for (var i = 0; i < quinc.length; i++) {
         quinc[i].normalize();
@@ -300,8 +306,8 @@ var Clebsch = {};
             if (t) {
                 var z0 = t[0];
                 var z1 = t[1];
-                check(x,y,z0,w);
-                check(x,y,z1,w);
+                //check(x,y,z0,w);
+                //check(x,y,z1,w);
                 // All permutations of x,y,z,w are solutions,
                 perm3(x,y,z0,w,colors[0],colors[1]);
                 perm3(x,y,z1,w,colors[2],colors[3]);
@@ -352,6 +358,65 @@ var Clebsch = {};
         clebsch1(); // Main surface
         return twirling;
     }
+    function barth(N) {
+        // The Barth sextic. 65 double points.
+        // 4(Φ²x²-y²)(Φ²y²-z²)(Φ²z²-x²)-(1+2Φ)(x²+y²+z²-w²)²w² = 0
+        // which is just a quadratic in z²
+        // Icosahedral symmetry if projected directly when it has
+        // a plane of lines at infinity.
+        // Rotate by i or j to take plane through origin.
+        // See: http://blogs.ams.org/visualinsight/2016/04/15/barth-sextic/
+        let colors = colorschemes[colorscheme];
+        function solve(x,y,w,line) {
+            let p = (1 + Math.sqrt(5))/2;
+            let p2 = p*p;
+            let x2 = x*x;
+            let y2 = y*y;
+            let w2 = w*w;
+            // K*(J-z²)*(p²*z²-L) = (1+2*p)w²(x²+y²+z²-w²)²
+            let K = 4*(p2*x2-y2), J = p2*y2, L = x2;
+            let M = (1+2*p)*w2;
+            let N = x2+y2-w2;
+            let A = K*p2+M;
+            let B = -K*(J*p2+L)+2*N*M;
+            let C = K*J*L + M*N*N;
+            let t = quadratic(A,B,C);
+            if (t) {
+                let color0 = line?Colors.white:colors[0];
+                let color1 = line?Colors.white:colors[1];
+                let color2 = line?Colors.white:colors[2];
+                for (let i = 0; i < 2; i++) {
+                    let z2 = t[i];
+                    if (z2 >= 0) {
+                        let z = Math.sqrt(z2);
+                        // All even perms with both signs of x,y,z
+                        for (let i = -1; i <= 1; i += 2) {
+                            for (let j = -1; j <= 1; j += 2) {
+                                for (let k = -1; k <= 1; k += 2) {
+                                    addpoint(i*x,j*y,k*z,w,color0);
+                                    addpoint(j*y,k*z,i*x,w,color1);
+                                    addpoint(k*z,i*x,j*y,w,color2);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for (let i = 0; i < N*N; i++) {
+            let p = randompair();
+            let x = p[0];
+            let y = p[1];
+            solve(x,y,1);
+        }
+        for (let i = 0; i < N; i++) {
+            let p = randompair();
+            let x = p[0];
+            let y = p[1];
+            solve(x,y,0,true);
+        }
+        return twirling;
+    }
     function cayley(N) {
         var colors = colorschemes[colorscheme];
         function cayley1() {
@@ -382,7 +447,7 @@ var Clebsch = {};
         return twirling;
     }
 
-    var surfaces = [clebsch, cayley, morph];
+    var surfaces = [clebsch, cayley, morph, barth];
     var surface = 0;
 
     var vertexarray;
@@ -431,7 +496,7 @@ var Clebsch = {};
         var matrices = initmatrices();
 
         var speed = 1;
-        var running = true;
+        var running = false;
         var runtime = 0;
 
         var infostring =
@@ -466,6 +531,8 @@ var Clebsch = {};
                     surface = 1;
                 } else if (matches = arg.match(/^morph$/)) {
                     surface = 2;
+                } else if (matches = arg.match(/^barth$/)) {
+                    surface = 3;
                 } else if (matches = arg.match(/^morphing$/)) {
                     morphing = true;
                 } else if (matches = arg.match(/^surface=([\d]+)$/)) {
@@ -607,7 +674,10 @@ var Clebsch = {};
                 }
                 qmul(quat,qtmp,qtmp);
                 //qmul(qtmp,quat,qtmp);
-                var x = qtmp.x, y = qtmp.y, z = qtmp.z, w = qtmp.w;
+                var x = qtmp.x;
+                var y = qtmp.y;
+                var z = qtmp.z;
+                var w = qtmp.w;
                 var eps = 1e-5;
                 // w might be 0, but apart from making bounding box
                 // calculations difficult, nothing too awful seems to happen.
