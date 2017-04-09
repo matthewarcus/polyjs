@@ -64,6 +64,7 @@
             nofaces: false,
             dospline: false,
             reversefaces: false,
+            projective: false,
         }
     };
 
@@ -214,20 +215,8 @@
                 var x = parseFloat(items[0]);
                 var y = parseFloat(items[1]);
                 var z = parseFloat(items[2]);
-                if (items[3]) {
-                    // Crude attempt to deal with homogenous coordinates.
-                    // w actually zero is problematic, so just make it very small.
-                    // eps can't be too big or texture interpolation goes awry.
-                    // We could also treat at 4-space coordinates.
-                    var eps = 1e-4;
-                    var w = parseFloat(items[3]);
-                    if (w < 0) {
-                        w = -w; x = -x; y = -y; z = -z;
-                    }
-                    if (w < eps) w = eps;
-                    x /= w; y /= w; z /= w;
-                }
-                vertices.push(new THREE.Vector3(x,y,z));
+                var w = !items[3] ? 1 : parseFloat(items[3]);
+                vertices.push(new THREE.Vector4(x,y,z,w));
                 nvertices--;
                 if (nvertices == 0) {
                     state = 3;
@@ -382,6 +371,7 @@
         var allvertices = options.allvertices;
         var dospline = options.dospline;
         var reversefaces = options.reversefaces;
+        var projective = options.projective;
         var docut = false;
         
         geometry.nvertices = 0
@@ -414,9 +404,22 @@
         }
         function addvertex(vertex) {
             if (vertices.length <= geometry.nvertices) {
+                // THREE.js only knows about 3-vectors for
+                // points, so need to do perspective division 
                 vertices.push(new THREE.Vector3);
             }
-            vertices[geometry.nvertices].copy(vertex);
+            var v = vertices[geometry.nvertices];
+            v.copy(vertex);
+            var w = vertex.w;
+            if (w != null) {
+                var eps = 1e-3;
+                // Avoid division by zero by using a very
+                // small value of w instead.
+                if (w >= 0 && w < eps) w = eps;
+                else if (w < 0 && w > -eps) w = -eps;
+                v.x /= w; v.y /= w; v.z /= w;
+            }
+            //console.log(vertices[geometry.nvertices]);
             geometry.nvertices++;
             return geometry.nvertices-1;
         }
@@ -426,8 +429,9 @@
         var defaultedgecolor = new THREE.Color(0.9,0.9,0.9);
         var m = new THREE.Matrix4;
         var tt = new THREE.Matrix4;
-        var yaxis = new THREE.Vector3(0,1,0);
         var xaxis = new THREE.Vector3(1,0,0);
+        var yaxis = new THREE.Vector3(0,1,0);
+        var zaxis = new THREE.Vector3(0,0,1);
         function showvertex(v0, color) {
             if (!vertexmodel) {
                 if (vertexstyle === "cylinder") {
@@ -488,10 +492,80 @@
                 tt.makeRotationAxis(raxis,theta);
                 m.multiply(tt);
             }
-            tt.makeScale(1,edgelen,1);
+            // For "projective" lines, extend out to
+            // great distance.
+            var len = projective?1000:edgelen;
+            tt.makeScale(1,len,1);
             m.multiply(tt);
             if (!edgemodel) {
                 edgemodel = new THREE.CylinderGeometry( edgewidth, edgewidth, 1);
+            }
+            for (var i = 0; i < edgemodel.faces.length; i++) {
+                edgemodel.faces[i].color = color || defaultedgecolor;
+            }
+            offMerge2(geometry,edgemodel,m);
+        }
+        function showedge0(v0, v1, color) {
+            // This has something to do with hyperbolic geometry,
+            // but I forget exactly what...
+            // Want a quaternion that rotates p to p', q to q',
+            // where |p| = |p'|, |q| = |q'|, |p-q| = |p'-q'|
+            // ie. rotate a triangle from origin rigidly.
+            // First rotate p onto p' around normal to opq,
+            // then rotate q' to q around p'.
+            // r(x,p,a) = rotate x by a about pxp', 0 is angle pop'
+            // p' = r(p,pxp,a)
+            // q'' = r(q,pxp,a)
+            // Now want b so that: q' = r(q'',p',b)
+            // Make cylinder, stretch to right length, rotate
+            // to the correct orientation, then translate into position.
+            edge.subVectors(v1,v0);
+            var edgelen = edge.length();
+            if (Math.abs(edgelen) < 1e-4) return;
+
+            midpoint.addVectors(v0,v1); // Map cylinder origin to here.
+            midpoint.divideScalar(2);   // Midpoint
+
+            m.identity();
+            tt.makeTranslation(midpoint.x,midpoint.y,midpoint.z);
+            //m.multiply(tt);
+
+            let theta = Math.PI/3;
+            let k = 0.5*edgelen/Math.sin(theta);
+
+            if (0) {
+            let turn = Math.atan2(midpoint.x,midpoint.z);
+            tt.makeRotationAxis(yaxis,turn);
+            m.multiply(tt);
+
+            let turn0 = Math.atan2(midpoint.x,midpoint.z);
+            tt.makeRotationAxis(zaxis,turn);
+            m.multiply(tt);
+
+            let tilt = Math.atan2(-Math.sqrt(midpoint.x*midpoint.x + midpoint.z*midpoint.z),
+                                  -midpoint.y);
+            tt.makeRotationAxis(xaxis,tilt);
+            m.multiply(tt);
+
+            var raxis = vcross(yaxis,edge);
+            if (raxis.length() > 1e-4) {
+                let theta = Math.a(vdot(yaxis,edge)/edgelen);
+                raxis.normalize();
+                tt.makeRotationAxis(raxis,theta);
+                m.multiply(tt);
+            }
+            }
+
+            // translate to align ends with x-axis
+            tt.makeTranslation(0,-Math.cos(theta)*k,0);
+            m.multiply(tt);
+
+            // Rotate segment around to by symmetric about y
+            tt.makeRotationAxis(zaxis,0.5*Math.PI-theta);
+            m.multiply(tt);
+        
+            if (true || !edgemodel) {
+                edgemodel = new THREE.TorusGeometry(k,edgewidth,8,24,2*theta);
             }
             for (var i = 0; i < edgemodel.faces.length; i++) {
                 edgemodel.faces[i].color = color || defaultedgecolor;
@@ -503,7 +577,9 @@
         var cutnormal = new THREE.Vector3(1,2,3);
         cutnormal.normalize();
 
-        var nvertices = off.vertices.length
+        off.vertices = off.vertices || [];
+        off.faces = off.faces || [];
+        var nvertices = off.vertices.length //
         var nfaces = off.faces.length
         for (var i = 0; i < nvertices; i++) {
             addvertex(off.vertices[i]);
@@ -583,7 +659,8 @@
                     for (var i = 0; i < n; i++) {
                         s.push(vertices[vlist[i]]);
                     }
-                    var curve = new THREE.ClosedSplineCurve3(s);
+                    //var curve = new THREE.ClosedSplineCurve3(s);
+                    var curve = new THREE.CatmullRomCurve3(s);
                     var geom = new THREE.TubeGeometry(curve, n, edgewidth, 8, true);
                     if (color) {
                         for (var i = 0; i < geom.faces.length; i++) {
