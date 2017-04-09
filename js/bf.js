@@ -300,7 +300,7 @@ PolyContext.prototype.theorem = function(off,options) {
     var BQ = new THREE.Vector4(0,1,0,0);
     var CQ = new THREE.Vector4(0,0,1,0);
     var DQ = new THREE.Vector4(0,0,0,1);
-    // Apply a quaternion for a Clifford rotation
+    // Apply a quaternion for a Clifford translation
     if (!options.quat) {
         options.quat = new THREE.Vector4(1,0,-0.618,1);
         options.quat.normalize();
@@ -472,8 +472,16 @@ PolyContext.prototype.polygon = function(off,options) {
         var p2 = vertex(i+1)
         var c = vdiv(vadd(p1,p2),2)
         var q = vmul(c,efacts[i%2])
-        addvertex(c,Color.blue)
-        var qi = addvertex(q,Color.cyan)
+        var color1, color2;
+        if (i%2) {
+            color1 = Color.blue;
+            color2 = Color.orange;
+        } else {
+            color1 = Color.magenta;
+            color2 = Color.cyan;
+        }
+        addvertex(c,color1);
+        var qi = addvertex(q,color2)
         addface([i,(i+1)%(2*n)],Color.yellow)
         if (i%2 == eindex) vlist.push(qi)
     }
@@ -1270,4 +1278,4 @@ PolyContext.prototype.bow = function(off,options) {
                 
         return { vertices: vertices, faces: faces }
     }
-} ())
+} ());
