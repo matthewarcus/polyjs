@@ -171,8 +171,10 @@ PolyContext.prototype.desargues = function(off,options) {
     qmul(quat,quinc,quat);
     function addvertex(v,color) {
         var i = vertices.length
-        var qv = new THREE.Vector4(v.x,v.y,v.z,0)
+        var w = options.projective ? 1 : 0;
+        var qv = new THREE.Vector4(v.x,v.y,v.z,w)
         qmul(quat,qv,qv);
+        if (!options.projective) qv.w = 1; // Yuk!
         vertices.push(qv);
         if (color) faces.push({ vlist: [i], color: color })
         return i

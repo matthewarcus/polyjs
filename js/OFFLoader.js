@@ -494,7 +494,7 @@
             }
             // For "projective" lines, extend out to
             // great distance.
-            var len = projective?1000:edgelen;
+            var len = projective?10000:edgelen;
             tt.makeScale(1,len,1);
             m.multiply(tt);
             if (!edgemodel) {
