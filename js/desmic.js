@@ -18,7 +18,7 @@
         if (!options.quat) {
             options.quat = new THREE.Vector4(1,0,0,0);
             options.quat.normalize();
-            options.quinc = new THREE.Vector4(1,0.005,0.005,0.005);
+            options.quinc = new THREE.Vector4(1,0.002,0.002,0.002);
             options.quinc.normalize();
         }
         var quat = options.quat;
