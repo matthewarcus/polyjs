@@ -50,6 +50,17 @@ var Clebsch = {};
         var r3 = p0*q3 + p1*q2 - p2*q1 + p3*q0;
         r.x = r0; r.y = r1; r.z = r2; r.w = r3;
     }
+    function qmat(m,p0,p1,p2,p3) {
+        // As a matrix mul:
+        // p0 p1 p2 p3
+        // p1 p0 -p3 p2
+        // p2 p3 p0 -p1
+        // p3 -p2 p1 p0
+        m.set(p0,-p1,-p2,-p3,
+              p1,p0,-p3,p2,
+              p2,p3,p0,-p1,
+              p3,-p2,p1,p0);
+    }
     function qconj(p) {
         return new THREE.Vector4(p.x,-p.y,-p.z,-p.w);
     }
@@ -67,7 +78,7 @@ var Clebsch = {};
 
     function initmatrices() {
         var matrices = []
-        matrices.push(null);
+        matrices.push(new THREE.Matrix4);
         {
             // The "classic" Clebsch view.
             var k = 4 // Vertical elongation
@@ -78,9 +89,15 @@ var Clebsch = {};
                   -Math.sin(Math.PI/3),Math.cos(Math.PI/3),0,0,
                   k, k, k, 0,
                   -l, -l, -l, l);
-            n.set(1,0,0,0, 0,0,1,0, 0,1,0,0, 0,0,0,1);
+            n.set(1,0,0,0,
+                  0,0,1,0,
+                  0,1,0,0,
+                  0,0,0,1);
             n.multiply(m);
             matrices.push(n);
+            console.log.apply(null,n.elements);
+            m.getInverse(n);
+            console.log.apply(null,m.elements);
         }
         {
             // Vertical rotation
@@ -100,19 +117,28 @@ var Clebsch = {};
         {
             var m = new THREE.Matrix4;
             var k = 0.5;
-            m.set(1,0,0,0, 0,1,0,0, 0,0,1,0, -k,-k,-k,k);
+            m.set(1,0,0,0,
+                  0,1,0,0,
+                  0,0,1,0,
+                  -k,-k,-k,k);
             m.getInverse(m);
             matrices.push(m);
         }
         {
             var m = new THREE.Matrix4;
-            m.set(-1,1,1,1, 1,-1,1,1, 1,1,-1,1, -1,-1,-1, 1);
+            m.set(-1,1,1,1,
+                  1,-1,1,1,
+                  1,1,-1,1,
+                  -1,-1,-1,1);
             m.getInverse(m);
             matrices.push(m);
         }
         {
             var m = new THREE.Matrix4;
-            m.set(-1,1,1,1, 1,-1,1,1, 1,1,-1,1, 1,1,1,-1);
+            m.set(-1,1,1,1,
+                  1,-1,1,1,
+                  1,1,-1,1,
+                  1,1,1,-1);
             m.getInverse(m);
             matrices.push(m);
         }
@@ -142,6 +168,7 @@ var Clebsch = {};
         new THREE.Vector4(0,0,1,0),
         new THREE.Vector4(0,1,0,1),
         new THREE.Vector4(0,1,0,0),
+        new THREE.Vector4(0,-1,0,0),
     ];
     for (var i = 0; i < quinc.length; i++) {
         quinc[i].normalize();
@@ -159,7 +186,7 @@ var Clebsch = {};
     var npoints = 0;
 
     function addpoint(x,y,z,w,color) {
-        console.assert(color);
+        //console.assert(color);
         if (points.length <= npoints) {
             points.push(new THREE.Vector4);
             colors.push(null);
@@ -264,20 +291,52 @@ var Clebsch = {};
                 perm3(x,y,z1,w,colors[2],colors[3]);
             }
         }
-        // Well, we can have these 3 lines at least.
-        for (var i = 0; i < N; i++) {
-            var p = randompair();
-            var x = p[0];
-            var y = p[1];
-            perm3(x,-x,y,0,colors[4]);
+        function morph1() {
+            for (var i = 0; i < N*N; i++) {
+                var p = randompair();
+                var x = p[0];
+                var y = p[1];
+                var w = 1;
+                solve(x,y,w);
+            }
         }
-        for (var i = 0; i < N*N; i++) {
-            var p = randompair();
-            var x = p[0];
-            var y = p[1];
-            var w = 1;
-            solve(x,y,w);
+        function morph2() {
+            // And another 12, maybe.
+            var A = 3, B = 3, C = 1-K;
+            var t = quadratic(A,B,C);
+            if (t) {
+                var z0 = t[0];
+                var z1 = t[1];
+                for (var i = 0; i < N; i++) {
+                    var p = randompair();
+                    var x = p[0];
+                    var y = p[1];
+                    var c1 = 4, c2 = 4;
+                    perm3(x,-x,z0*y,y,colors[c1]);
+                    perm3(x,-x,z1*y,y,colors[c2]);
+                    perm3(y,-y,z0*x,x,colors[c1]);
+                    perm3(y,-y,z1*x,x,colors[c2]);
+
+                    perm3(z0*x,z1*x,y,x,colors[c1]);
+                    perm3(z1*x,z0*x,y,x,colors[c2]);
+                    perm3(z0*y,z1*y,x,y,colors[c1]);
+                    perm3(z1*y,z0*y,x,y,colors[c2]);
+                }
+            }
         }
+        function morph3() {
+            // Well, we can have these 3 lines at least.
+            // Actually, all 27 are real for K > 0.25
+            for (var i = 0; i < N; i++) {
+                var p = randompair();
+                var x = p[0];
+                var y = p[1];
+                perm3(x,-x,y,0,colors[5]);
+            }
+        }
+        morph1();
+        morph2();
+        morph3();
         return morphing || twirling; // Carry on redrawing
     }
 
@@ -353,9 +412,9 @@ var Clebsch = {};
                 perm6(x,y,w,z,colors[6],colors[5]);
             }
         }
-        clebsch3(); // 12 lines
-        clebsch2(); // 15 lines
         clebsch1(); // Main surface
+        clebsch2(); // 15 lines
+        clebsch3(); // 12 lines
         return twirling;
     }
     function barth(N) {
@@ -380,13 +439,13 @@ var Clebsch = {};
             let A = K*p2+M;
             let B = -K*(J*p2+L)+2*N*M;
             let C = K*J*L + M*N*N;
-            let t = quadratic(A,B,C);
-            if (t) {
+            let res = quadratic(A,B,C);
+            if (res) {
                 let color0 = line?Colors.white:colors[0];
                 let color1 = line?Colors.white:colors[1];
                 let color2 = line?Colors.white:colors[2];
                 for (let i = 0; i < 2; i++) {
-                    let z2 = t[i];
+                    let z2 = res[i];
                     if (z2 >= 0) {
                         let z = Math.sqrt(z2);
                         // All even perms with both signs of x,y,z
@@ -496,7 +555,7 @@ var Clebsch = {};
         var matrices = initmatrices();
 
         var speed = 1;
-        var running = false;
+        var running = true;
         var runtime = 0;
 
         var infostring =
@@ -666,14 +725,26 @@ var Clebsch = {};
         // will do for now.
         var qtmp = new THREE.Vector4;
         var quat = new THREE.Vector4;
+        var m = new THREE.Matrix4;
+        var tmp = new THREE.Matrix4;
         function setvertices() {
-            for (var i = 0; i < npoints; i++) {
+            var q = quinc[quincindex];
+            var theta = runtime*Math.PI;
+            // A quaternion represents an (isoclinic) rotation in
+            // 4-space - effectively changing the 'plane at infinity'.
+            // This is quinc^theta, where quinc is a pure quaternion.
+            // We roll this into the matrix multiplication.
+            var cost = Math.cos(theta);
+            var sint = Math.sin(theta);
+            quat.set(cost,sint*q.y,sint*q.z,sint*q.w);
+            m.identity();
+            qmat(m,quat.x,quat.y,quat.z,quat.w);
+            m.multiply(matrices[matrixindex]);
+            //tmp.makeRotationY(theta*0.618);
+            //m.multiplyMatrices(tmp,m);
+            for (let i = 0; i < npoints; i++) {
                 qtmp.copy(points[i]);
-                if (matrices[matrixindex]) {
-                    qtmp.applyMatrix4(matrices[matrixindex]);
-                }
-                qmul(quat,qtmp,qtmp);
-                //qmul(qtmp,quat,qtmp);
+                qtmp.applyMatrix4(m);
                 var x = qtmp.x;
                 var y = qtmp.y;
                 var z = qtmp.z;
@@ -686,6 +757,8 @@ var Clebsch = {};
                 if (-eps < w && w < 0) w = -eps;
                 w /= scale;
                 x /= w; y /= w; z /= w;
+                // Can't drop points here, but can move them
+                // well out of the displayed region.
                 if (radius2 && x*x+y*y+z*z > radius2) x = 10000;
                 vertexarray[3*i+0] = x;
                 vertexarray[3*i+1] = y;
@@ -705,28 +778,18 @@ var Clebsch = {};
             case 0: s += "Clebsch surface: "; break;
             case 1: s += "Cayley surface: "; break;
             case 2: s += "Morphing surface: "; break;
+            case 3: s += "Barth surface: "; break;
             default: s += "<Unknown surface>: "; break;
             }
             s += "q = [ " + format(quat.x) + " " + format(quat.y) +
                 " " + format(quat.z) + " " + format(quat.w) + " ]";
-            if (matrices[matrixindex]) {
-                var elements = matrices[matrixindex].elements;
-                s += " m = [";
-                for (var i = 0; i < elements.length; i++) {
-                    s += format(elements[i]) + " ";
-                }
-                s += "] ";
+            var elements = matrices[matrixindex].elements;
+            s += " m = [";
+            for (var i = 0; i < elements.length; i++) {
+                s += format(elements[i]) + " ";
             }
+            s += "] ";
             return s;
-        }
-        function qrotate(q,theta,quat) {
-            // A quaternion represents an (isoclinic) rotation in
-            // 4-space - effectively changing the 'plane at infinity'.
-            // This is e^theta*qinc, where quinc is a pure quaternion.
-            // We could roll this into the matrix multiplication above.
-            var cost = Math.cos(theta);
-            var sint = Math.sin(theta);
-            quat.set(cost,sint*q.y,sint*q.z,sint*q.w);
         }
         function dorender() {
             lasttime = globaltime;
@@ -735,10 +798,8 @@ var Clebsch = {};
             
             if (running) runtime += speed * 0.1 * (globaltime - lasttime);
 
-            var q = quinc[quincindex];
-            qrotate(q,runtime*Math.PI,quat);
             // Do a full render whether we need to or not.
-            setTimeout(function() { requestAnimationFrame(dorender); }, 1000 / 25 );
+            setTimeout(function() { requestAnimationFrame(dorender); }, 1000 / 30 );
             if (needupdate) {
                 needupdate = setgeometry(N);
             }

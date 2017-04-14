@@ -521,7 +521,8 @@
         var r1 = Vector.normalize([1,0.0,0.0,0.01]);
         var r2 = Vector.normalize([1,0.0,0.01618,0.0]);
         var dbase1 = options.dbase1 || Vector.normalize([0,1,0,0]);
-        var dbase2 = options.dbase2 || Vector.normalize([0,0,0.5,1]);
+        //var dbase2 = options.dbase2 || Vector.normalize([0,0,0.5,1]);
+        var dbase2 = options.dbase2 || Vector.normalize([0,1,0,0]);
         options.dbase1 = qmul(qconj(r1),qmul(dbase1,r1))
         options.dbase2 = qmul(qconj(r2),qmul(dbase2,r2))
 
@@ -542,7 +543,8 @@
         var faces = [];
         var quat = [2,0,0,0];
         from(0,N,function(i) {
-            vertices.push(new THREE.Vector3(quat[1],quat[2],quat[3]));
+            //vertices.push(new THREE.Vector3(quat[1],quat[2],quat[3]));
+            vertices.push(new THREE.Vector3(quat[0],quat[1],quat[2]));
             quat = qmul(quat,dquat1);
             quat = qmul(dquat2,quat);
             // We are doing an orthogonal projection of a hypersphere,

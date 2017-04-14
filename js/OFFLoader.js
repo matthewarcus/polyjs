@@ -215,8 +215,14 @@
                 var x = parseFloat(items[0]);
                 var y = parseFloat(items[1]);
                 var z = parseFloat(items[2]);
-                var w = !items[3] ? 1 : parseFloat(items[3]);
-                vertices.push(new THREE.Vector4(x,y,z,w));
+                // Only make 4-vectors if we need to
+                // some OFF functions don't understand them
+                if (!items[3]) {
+                    vertices.push(new THREE.Vector3(x,y,z));
+                } else {
+                    var w = parseFloat(items[3]);
+                    vertices.push(new THREE.Vector4(x,y,z,w));
+                }
                 nvertices--;
                 if (nvertices == 0) {
                     state = 3;
