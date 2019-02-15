@@ -1387,7 +1387,7 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height,mainwindow) {
                     if (context.verbose) console.log("Calling ", context.fnames[i])
                     off = context[context.fnames[i]](off,context.offoptions,context.stopwatch.running)
                 }
-                if (off) {
+                if (off && off.vertices) {
                     if (!context.vertices) context.vertices = [];
                     if (!context.faces) context.faces = [];
                     //THREE.OFFLoader.display(off, context.offgeom, options);
