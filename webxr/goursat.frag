@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
 // Goursat Quartic Surfaces
 //
@@ -22,8 +22,7 @@
 const float PI =  3.141592654;
 
 // Lighting
-vec3 light = vec3(1,1,-1);
-
+vec3 light = vec3(1,1,1);
 float ambient;
 float diffuse;
 float specular = 0.4;
@@ -401,7 +400,7 @@ vec3 scene(vec3 p0, vec3 r) {
   float tmin = -dot(p0,r);
   p0 += tmin*r;
   Result res = Result(vec3(0),vec3(0),vec3(0),1e8);
-  float ttime = 0.2*iTime;
+  float ttime = 0.1*iTime;
   float rtime = floor(ttime);
   ttime -= rtime;
   vec4 params;
@@ -425,47 +424,56 @@ vec3 scene(vec3 p0, vec3 r) {
   return applylighting(res.basecolor,res.p,res.n,r);
 }
 
-// GUI related code starts here
 vec3 transform(in vec3 p) {
-#if 0
   if (iMouse.x > 0.0) {
     float theta = (2.0*iMouse.y-iResolution.y)/iResolution.y*PI;
     float phi = (2.0*iMouse.x-iResolution.x)/iResolution.x*PI;
     p.yz = rotate(p.yz,theta);
     p.zx = rotate(p.zx,-phi);
   }
-#endif
   if (!keypress(CHAR_R)) {
-    float t = 0.5*iTime;
+    float t = iTime;
     p.yz = rotate(p.yz, 0.1*t);
     p.zx = rotate(p.zx, 0.222*t);
   }
   return p;
 }
 
-void mainVR(out vec4 fragColor, vec2 fragCoord, vec3 p, vec3 r) {
-  float camera = -6.0;
+void mainFun(out vec4 fragColor, vec2 fragCoord, vec3 p, vec3 r) {
   ambient = 0.4;
   diffuse = 1.0-ambient;
   specular = 0.8;
   specularpow = 10.0;
-
-  light = normalize(light);
-
-  p.z -= camera;
-
   p = transform(p);
   r = transform(r);
   light = transform(light);
-  vec3 drdx = 0.5*dFdx(r);
-  vec3 drdy = 0.5*dFdy(r);
+  light = normalize(light);
+  vec3 drdx = dFdx(r);
+  vec3 drdy = dFdy(r);
   vec3 color = vec3(0);
-  for (int i = 0; i < 2; i++) {
-    for (int j = 0; j < 2; j++) {
-      color += scene(p,normalize(r+float(i)*drdx+float(j)*drdy));
+  const float AA = 2.0;
+  for (float i = 0.0; i < AA; i++) {
+    for (float j = 0.0; j < AA; j++) {
+      color += scene(p,normalize(r+i/AA*drdx+j/AA*drdy));
     }
   }
-  color /= 4.0;
+  color /= AA*AA;
   if (alert) color.x = 1.0;
   fragColor = vec4(sqrt(color),1);
+}
+
+void mainVR(out vec4 fragColor, vec2 fragCoord, vec3 p, vec3 r) {
+  float camera = 6.0;
+  p.z += camera;
+  mainFun(fragColor,fragCoord,p,r);
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
+  float scale = 1.0;
+  float camera = 4.0;
+  vec2 uv = scale*(2.0*fragCoord.xy - iResolution.xy)/iResolution.y;
+  camera *= 0.1*float(10+keycount(KEY_DOWN)-keycount(KEY_UP));
+  vec3 p = vec3(0,0,camera);
+  vec3 r = vec3(uv,-2);
+  mainFun(fragColor,fragCoord,p,r);
 }

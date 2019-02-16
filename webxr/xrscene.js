@@ -55,13 +55,14 @@ Renderer.prototype.finalize = function (fstext) {
         "uniform mat4 iProjection;",
         "uniform mat4 iMatrix;",
         "uniform vec4 iResolution;",
+        "uniform vec4 iMouse;",
         "out vec4 outColor;",
         "in vec2 vTextureCoord;",
         "void mainVR( out vec4 fragColor, in vec2 fragCoord,",
         "             in vec3 fragRayOrigin, in vec3 fragRayDir);",
         "void main() {",
         //"  vec4 p = vec4(gl_FragCoord.xy/iResolution.xy*2.0-1.0,0,1);",
-        "  vec4 p = vec4(vTextureCoord,1,1);",
+        "  vec4 p = vec4(vTextureCoord,0,1);",
         "  vec4 eye = vec4(0,0,1,0);",
         "  mat4 m = iMatrix; //inverse(iProjection*iView);",
         "  p = m*p;",
@@ -121,10 +122,11 @@ Renderer.prototype.finalize = function (fstext) {
     this.vertBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    this.startTime = Date.now();
     return true;
 }
 
-Renderer.prototype.draw = function (projectionMatrix, viewMatrix, iTime) {
+Renderer.prototype.draw = function (projectionMatrix, viewMatrix) {
     const gl = this.gl;
     const program = this.program;
     if (!program) {
@@ -134,7 +136,6 @@ Renderer.prototype.draw = function (projectionMatrix, viewMatrix, iTime) {
     let iMatrix = mat4.clone(projectionMatrix);
     mat4.mul(iMatrix,iMatrix,viewMatrix);
     mat4.invert(iMatrix,iMatrix);
-    //console.log(time);
     gl.useProgram(this.program);
     const index = gl.getAttribLocation(program, "aVertexPosition");
     if (index >= 0) {
@@ -142,12 +143,13 @@ Renderer.prototype.draw = function (projectionMatrix, viewMatrix, iTime) {
         gl.enableVertexAttribArray(index);
         gl.vertexAttribPointer(index, 3, gl.FLOAT, false, 3*4, 0*4);
     }
-    gl.uniform1f(gl.getUniformLocation(program, "iTime"), iTime);
+    gl.uniform1f(gl.getUniformLocation(program, "iTime"), this.time);
     // Parameter 2 is `transpose` - set it to false!
     gl.uniformMatrix4fv(gl.getUniformLocation(program, "iView"), false, viewMatrix);
     gl.uniformMatrix4fv(gl.getUniformLocation(program, "iProjection"), false, projectionMatrix);
     gl.uniformMatrix4fv(gl.getUniformLocation(program, "iMatrix"), false, iMatrix);
     gl.uniform4f(gl.getUniformLocation(program, "iResolution"), gl.canvas.width, gl.canvas.height,0,0);
+    gl.uniform4f(gl.getUniformLocation(program, "iMouse"),0,0,0,0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     let err = gl.getError();
     if (err) console.log("GL Error: ", err);
@@ -155,6 +157,7 @@ Renderer.prototype.draw = function (projectionMatrix, viewMatrix, iTime) {
 
 Renderer.prototype.startFrame = function () {
     //console.log("startFrame");
+    this.time = (Date.now()-this.startTime)/1000;
 }
 
 Renderer.prototype.endFrame = function () {
@@ -201,9 +204,8 @@ function initialize() {
 
     let projectionMatrix = mat4.create();
     let viewMatrix = mat4.create();
-
-    let startTime = Date.now();
-
+    let running = true;
+    
     function initXR() {
         xrButton = new XRDeviceButton({
             onRequestSession: onRequestSession,
@@ -243,6 +245,22 @@ function initialize() {
             // Using a simple identity matrix for the view.
             mat4.identity(viewMatrix);
 
+            function keypressHandler(event) {
+                if (!event.ctrlKey) {
+                    // Ignore event if control key pressed.
+                    var c = String.fromCharCode(event.charCode)
+                    switch(c) {
+                    case ' ':
+                        running = !running;
+                        if (running) {
+                            // If we are now running, start animating.
+                            window.requestAnimationFrame(onWindowFrame);
+                        }
+                        break;
+                    }
+                }
+            }
+            
             // We need to track the canvas size in order to resize the WebGL
             // backbuffer width and height, as well as update the projection matrix
             // and adjust the viewport.
@@ -255,6 +273,7 @@ function initialize() {
                 gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
             }
             window.addEventListener('resize', onResize);
+            window.addEventListener("keypress",keypressHandler,false);
             onResize();
 
             // We'll kick off the render loop using the window's
@@ -326,7 +345,6 @@ function initialize() {
 
         renderer.startFrame();
 
-        const time = (Date.now()-startTime)/1000;
         if (pose) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, session.baseLayer.framebuffer);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -336,7 +354,7 @@ function initialize() {
                 gl.viewport(viewport.x, viewport.y,
                             viewport.width, viewport.height);
 
-                renderer.draw(view.projectionMatrix, view.viewMatrix, time);
+                renderer.draw(view.projectionMatrix, view.viewMatrix);
             }
         }
 
@@ -347,7 +365,7 @@ function initialize() {
     // a lot like a simplified version of the XR frame loop. Samples after
     // this one will do some work to hide this for code readability purposes.
     function onWindowFrame(t) {
-        window.requestAnimationFrame(onWindowFrame);
+        if (running) window.requestAnimationFrame(onWindowFrame);
 
         renderer.startFrame();
 
@@ -360,13 +378,10 @@ function initialize() {
         // don't have a list of view to loop through, but otherwise all of the
         // WebGL drawing logic is exactly the same.
 
-        const time = (Date.now()-startTime)/1000;
-        renderer.draw(projectionMatrix, viewMatrix, time);
-
+        renderer.draw(projectionMatrix, viewMatrix);
         renderer.endFrame();
     }
 
     // Start the XR application.
     initXR();
 }
-
