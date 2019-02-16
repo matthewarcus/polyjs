@@ -1,24 +1,27 @@
-"use strict"
+"use strict";
 
-function Renderer(gl,callback) {
-    // Fire off a request for the fragment shader code.
+let initialize = null;
+
+(function() {
+
+function Renderer(gl,url,oncompletion) {
+    // Send off a request for the fragment shader code.
     let renderer = this;
     this.gl = gl;
-    let url = "goursat.frag";
-    url += "?" + new Date().getTime();
+    this.iMatrix = mat4.create();
+    url += "?" + new Date().getTime(); // Skip caching
     const request = new XMLHttpRequest();
     request.open("GET", url);
     request.onreadystatechange = function() {
         if (request.readyState === 4) {
-            if (renderer.finalize(request.responseText)) {
-                callback();
-            }
+            renderer.finalize(request.responseText, oncompletion);
         }
     }
     request.send(null); // No body
 };
 
-Renderer.prototype.finalize = function (fstext) {
+// TODO: better name
+Renderer.prototype.finalize = function (fstext,oncompletion) {
     const VS = [
         "#version 300 es",
         "in vec3 aVertexPosition;",
@@ -26,24 +29,6 @@ Renderer.prototype.finalize = function (fstext) {
         "void main(void) {",
         "  gl_Position = vec4(aVertexPosition,1.0);",
         "  vTextureCoord = gl_Position.xy;",
-        "}"
-    ].join("\n");
-
-    // Not using this
-    const FS = [
-        "#version 300 es",
-        "precision highp float;",
-        "uniform float iTime;",
-        "uniform mat4 iView;",
-        "out vec4 outColor;",
-        //"uniform sampler2D diffuse;",
-        "in vec2 vTextureCoord;",
-
-        "void main() {",
-        "  vec4 p = vec4(vTextureCoord,0,1);",
-        "  p = inverse(iView)*p;",
-        "  if (length(p.xy) < 0.5) outColor = vec4(1,0.5+0.5*sin(iTime),0,1);",
-        "  else outColor = vec4(0,1,0,1);",
         "}"
     ].join("\n");
 
@@ -61,22 +46,22 @@ Renderer.prototype.finalize = function (fstext) {
         "void mainVR( out vec4 fragColor, in vec2 fragCoord,",
         "             in vec3 fragRayOrigin, in vec3 fragRayDir);",
         "void main() {",
-        //"  vec4 p = vec4(gl_FragCoord.xy/iResolution.xy*2.0-1.0,0,1);",
         "  vec4 p = vec4(vTextureCoord,0,1);",
         "  vec4 eye = vec4(0,0,1,0);",
         "  mat4 m = iMatrix; //inverse(iProjection*iView);",
         "  p = m*p;",
         "  eye = m*eye;",
-        "  p /= p.w;",  // Don't know we really need this
-        "  eye /= eye.w;", // Or this
+        "  p /= p.w;",
+        "  eye /= eye.w;",
         "  mainVR(outColor,vec2(0),eye.xyz,normalize(p.xyz-eye.xyz));",
         "}",
-        "#define texelFetch(a,b,c) (vec4(0))",
+        "#define texelFetch(a,b,c) (vec4(0))", // TODO: better way of fixing this
         "#line 1",
         ""
     ].join("\n");
     let gl = this.gl;
 
+    // Compile and link the shaders.
     function makeShader(source, shadertype) {
         const shader = gl.createShader(shadertype);
         gl.shaderSource(shader, source);
@@ -91,7 +76,6 @@ Renderer.prototype.finalize = function (fstext) {
             return null;
         }
     }
-    // Initialize the shaders.
     function initShaders(vshader,fshader) {
         let vertexShader = makeShader(vshader,gl.VERTEX_SHADER);
         let fragmentShader = makeShader(fshader,gl.FRAGMENT_SHADER);
@@ -111,8 +95,9 @@ Renderer.prototype.finalize = function (fstext) {
     }
 
     this.program = initShaders(VS,FSpreamble + fstext);
-    if (!this.program) return false;
-    
+    if (!this.program) return;
+
+    // Two triangles fill the screen
     const vertices = [
         1.0, 1.0, 0.0,
         -1.0, 1.0, 0.0,
@@ -122,21 +107,20 @@ Renderer.prototype.finalize = function (fstext) {
     this.vertBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    this.startTime = Date.now();
-    return true;
+    oncompletion();
 }
 
 Renderer.prototype.draw = function (projectionMatrix, viewMatrix) {
-    const gl = this.gl;
     const program = this.program;
     if (!program) {
-        console.log("Not ready!");
+        console.log("Program not ready!");
         return;
     }
-    let iMatrix = mat4.clone(projectionMatrix);
-    mat4.mul(iMatrix,iMatrix,viewMatrix);
-    mat4.invert(iMatrix,iMatrix);
+    const gl = this.gl;
     gl.useProgram(this.program);
+    let iMatrix = this.iMatrix;
+    mat4.mul(iMatrix,projectionMatrix,viewMatrix);
+    mat4.invert(iMatrix,iMatrix);
     const index = gl.getAttribLocation(program, "aVertexPosition");
     if (index >= 0) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuffer);
@@ -157,17 +141,20 @@ Renderer.prototype.draw = function (projectionMatrix, viewMatrix) {
 
 Renderer.prototype.startFrame = function () {
     //console.log("startFrame");
-    this.time = (Date.now()-this.startTime)/1000;
+    let t = Date.now();
+    if (!this.startTime) this.startTime = t;
+    this.time = (t-this.startTime)/1000;
 }
 
 Renderer.prototype.endFrame = function () {
     //console.log("endFrame");
 }
 
-// Nicked from cottontail - cut down to just WebGL2?
+// Code from cottontail, cut down to just WebGL2
 // Creates a WebGL context and initializes it with some common default state.
+
 function createWebGLContext(glAttribs) {
-  glAttribs = glAttribs || {alpha: false};
+  glAttribs = glAttribs || {alpha: false}; // Why no alpha?
 
   let webglCanvas = document.createElement('canvas');
   let contextTypes = ['webgl2'];
@@ -181,7 +168,7 @@ function createWebGLContext(glAttribs) {
   }
 
   if (!context) {
-    let webglType = (glAttribs.webgl2 ? 'WebGL 2' : 'WebGL');
+    let webglType = 'WebGL 2';
     console.error('This browser does not support ' + webglType + '.');
     return null;
   }
@@ -189,7 +176,7 @@ function createWebGLContext(glAttribs) {
   return context;
 }
 
-function initialize() {
+initialize = function() {
     // Apply the version shim.
     var versionShim = new WebXRVersionShim();
 
@@ -204,8 +191,11 @@ function initialize() {
 
     let projectionMatrix = mat4.create();
     let viewMatrix = mat4.create();
+
     let running = true;
-    
+    let shaderurl = "goursat.glsl"; // Get this from URL
+
+    // The main function - move this to the bottom?
     function initXR() {
         xrButton = new XRDeviceButton({
             onRequestSession: onRequestSession,
@@ -213,6 +203,7 @@ function initialize() {
         });
         document.querySelector('header').appendChild(xrButton.domElement);
 
+        // Find browser capabilities
         if (navigator.xr) {
             navigator.xr.supportsSessionMode('immersive-vr').then(() => {
                 xrButton.enabled = true;
@@ -245,6 +236,7 @@ function initialize() {
             // Using a simple identity matrix for the view.
             mat4.identity(viewMatrix);
 
+            // Space bar is stop/start animation
             function keypressHandler(event) {
                 if (!event.ctrlKey) {
                     // Ignore event if control key pressed.
@@ -291,10 +283,11 @@ function initialize() {
             xrCompatible: needXR
         });
 
-        renderer = new Renderer(gl,callback);
+        renderer = new Renderer(gl,shaderurl,callback);
     }
 
     function onRequestSession() {
+        // Mirroring - maybe make optional?
         let mirrorCanvas = document.createElement('canvas');
         let ctx = mirrorCanvas.getContext('xrpresent');
         mirrorCanvas.setAttribute('id', 'mirror-canvas');
@@ -385,3 +378,5 @@ function initialize() {
     // Start the XR application.
     initXR();
 }
+})();
+ 
