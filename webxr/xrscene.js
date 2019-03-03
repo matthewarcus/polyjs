@@ -3,13 +3,19 @@
 let initialize = null;
 
 (function() {
+    // TODO: get this from the URL
+    let shaderID = null
+    //shaderID = "4sX3Rn" // iq's menger sponge
+    //shaderID = "lttfDH"
+    //shaderID = "XdGczw"     // parallepiped
+    //shaderID = "4tSBDz"     // inverted spheres
+
 
 function Renderer(gl,url,oncompletion) {
     // Send off a request for the fragment shader code.
     let renderer = this;
     this.gl = gl;
     this.iMatrix = mat4.create();
-    //url += "?" + new Date().getTime(); // Skip caching
     const request = new XMLHttpRequest();
     request.open("GET", url);
     request.onreadystatechange = function() {
@@ -46,15 +52,11 @@ Renderer.prototype.finalize = function (fstext,oncompletion) {
         "void mainVR( out vec4 fragColor, in vec2 fragCoord,",
         "             in vec3 fragRayOrigin, in vec3 fragRayDir);",
         "void main() {",
-        //"  vec4 p = vec4(2.0*gl_FragCoord.xy/iResolution.xy-1.0,0,1);",
-        "  vec4 p = vec4(vTextureCoord,0,1);", // -1 <= z <= 1
-        "  vec4 eye = vec4(0,0,1,0);", // Infinity
-        //"  mat4 m = iMatrix; //inverse(iProjection*iView);",
-        //"  mat4 m = inverse(iView);",
-        "  mat4 m = inverse(iProjection*iView);",
+        "  vec4 p = vec4(vTextureCoord,0,1);", // The "screen position", -1 <= z <= 1
+        "  vec4 eye = vec4(0,0,1,0);",         // z-infinity
+        "  mat4 m = iMatrix;",
         "  p = m*p;",
-        //"  eye = m*eye;",
-        "  eye = inverse(iView)*vec4(0,0,0,1);",
+        "  eye = m*eye;",
         "  p /= p.w;",
         "  eye /= eye.w;",
         "  mainVR(outColor,vec2(0),eye.xyz,normalize(p.xyz-eye.xyz));",
@@ -98,9 +100,12 @@ Renderer.prototype.finalize = function (fstext,oncompletion) {
         }
     }
 
-    //let fsobj = JSON.parse(fstext);
-    //fstext = fsobj['Shader']['renderpass']['0']['code'];
-    //console.log(fstext);
+    if (shaderID) {
+        // Pull data out from Shadertoy JSON response.
+        // This is probably a bit fragile.
+        let fsobj = JSON.parse(fstext);
+        fstext = fsobj['Shader']['renderpass']['0']['code'];
+    }
     this.program = initShaders(VS,FSpreamble + fstext);
     if (!this.program) return;
 
@@ -117,7 +122,7 @@ Renderer.prototype.finalize = function (fstext,oncompletion) {
     oncompletion();
 }
 
-Renderer.prototype.draw = function (projectionMatrix, viewMatrix, viewport) {
+Renderer.prototype.draw = function (projectionMatrix, viewMatrix, selected) {
     const program = this.program;
     if (!program) {
         console.log("Program not ready!");
@@ -125,7 +130,7 @@ Renderer.prototype.draw = function (projectionMatrix, viewMatrix, viewport) {
     }
     const gl = this.gl;
     gl.useProgram(this.program);
-    let iMatrix = this.iMatrix;
+    const iMatrix = this.iMatrix;
     mat4.mul(iMatrix,projectionMatrix,viewMatrix);
     mat4.invert(iMatrix,iMatrix);
     const index = gl.getAttribLocation(program, "aVertexPosition");
@@ -139,17 +144,17 @@ Renderer.prototype.draw = function (projectionMatrix, viewMatrix, viewport) {
     gl.uniformMatrix4fv(gl.getUniformLocation(program, "iView"), false, viewMatrix);
     gl.uniformMatrix4fv(gl.getUniformLocation(program, "iProjection"), false, projectionMatrix);
     gl.uniformMatrix4fv(gl.getUniformLocation(program, "iMatrix"), false, iMatrix);
-    let devicePixelRatio = window.devicePixelRatio || 1;
-    //let width = gl.canvas.clientWidth, height = gl.canvas.clientHeight;
-    let width = gl.canvas.width;
-    let height = gl.canvas.height;
-    if (viewport) {
-        width = viewport.width;
-        height = viewport.height;
-    }
+    let devicePixelRatio = window.devicePixelRatio || 1; // What to do with this?
+    let width = gl.canvas.width, height = gl.canvas.height;
     //let width = gl.canvas.drawingBufferWidth, height = gl.canvas.drawingBufferHeight;
-    gl.uniform4f(gl.getUniformLocation(program, "iResolution"),width*devicePixelRatio, height*devicePixelRatio,0,0);
-    gl.uniform4f(gl.getUniformLocation(program, "iMouse"),0,0,0,0);
+    gl.uniform4f(gl.getUniformLocation(program, "iResolution"),
+                 width*devicePixelRatio, height*devicePixelRatio,0,0);
+    if (selected) {
+        // TBD: think of a better way of doing this
+        gl.uniform4f(gl.getUniformLocation(program, "iMouse"),1,1,0,0);
+    } else {
+        gl.uniform4f(gl.getUniformLocation(program, "iMouse"),0,0,0,0);
+    }
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     let err = gl.getError();
     if (err) console.log("GL Error: ", err);
@@ -209,44 +214,15 @@ initialize = function() {
     let viewMatrix = mat4.create();
 
     let running = true;
-    //let shaderID = "4sX3Rn"
-    //let shaderID = "lttfDH"
-    //let shaderID = "lsB3zR"
-    //let shaderurl = "https://www.shadertoy.com/api/v1/shaders/" + shaderID + "?key=fdntwh"
-    let shaderurl = "goursat.glsl"; // Get this from URL
+    let selected = false;
 
-    let mousedown = false;
+    let shaderurl;
 
-    // The main function - move this to the bottom?
-    function initXR() {
-        xrButton = new XRDeviceButton({
-            onRequestSession: onRequestSession,
-            onEndSession: onEndSession
-        });
-        document.querySelector('header').appendChild(xrButton.domElement);
-
-        // Find browser capabilities
-        if (navigator.xr) {
-            navigator.xr.supportsSessionMode('immersive-vr').then(() => {
-                xrButton.enabled = true;
-            });
-
-            let outputCanvas = document.createElement('canvas');
-            let ctx = outputCanvas.getContext('xrpresent');
-
-            navigator.xr.requestSession({ outputContext: ctx })
-                .then((session) => {
-                    document.body.appendChild(outputCanvas);
-                    onSessionStarted(session);
-                })
-                .catch((err) => {
-                    initFallback();
-                });
-        } else {
-            // If navigator.xr isn't present in the browser then we need to use
-            // the fallback rendering path.
-            initFallback();
-        }
+    if (shaderID) {
+        shaderurl = "https://www.shadertoy.com/api/v1/shaders/" + shaderID + "?key=fdntwh";
+    } else {
+        shaderurl = "goursat.glsl";
+        shaderurl += "?" + new Date().getTime(); // Skip caching
     }
 
     // When we hit the fallback path, we'll need to initialize a few extra
@@ -260,7 +236,6 @@ initialize = function() {
 
             // Space bar is stop/start animation
             function keypressHandler(event) {
-                //alert(event.charCode);
                 if (!event.ctrlKey) {
                     // Ignore event if control key pressed.
                     var c = String.fromCharCode(event.charCode)
@@ -306,35 +281,28 @@ initialize = function() {
         });
 
         renderer = new Renderer(gl,shaderurl,callback);
-
-        function onMouseDown( event ) {
-            mousedown = true;
-        }
-        function onMouseUp( event ) {
-            mousedown = false;
-        }
-        window.addEventListener( 'mousedown', onMouseDown, false );
-        window.addEventListener( 'mouseup', onMouseUp, false );
     }
 
     function onRequestSession() {
-        // Mirroring - maybe make optional?
         let mirrorCanvas = document.createElement('canvas');
         let ctx = mirrorCanvas.getContext('xrpresent');
         mirrorCanvas.setAttribute('id', 'mirror-canvas');
         document.body.appendChild(mirrorCanvas);
-
         navigator.xr.requestSession({ mode: 'immersive-vr', outputContext: ctx }).then((session) => {
             xrButton.setSession(session);
             onSessionStarted(session);
         });
     }
 
+    function onSelect() {
+        selected = !selected;
+    }
+    
     function onSessionStarted(session) {
         session.addEventListener('end', onSessionEnded);
+        session.addEventListener('select', onSelect);
 
         initGL(true, function() {
-
             session.baseLayer = new XRWebGLLayer(session, gl);
 
             session.requestReferenceSpace({ type: 'stationary', subtype: 'eye-level' }).then((refSpace) => {
@@ -359,8 +327,7 @@ initialize = function() {
         }
     }
 
-    let alerted = false;
-    function onXRFrame(t, frame) {
+    function onXRFrame(timestamp, frame) {
         let session = frame.session;
         let refSpace = session.immersive ?
             xrImmersiveRefSpace :
@@ -379,11 +346,8 @@ initialize = function() {
                 let viewport = session.baseLayer.getViewport(view);
                 gl.viewport(viewport.x, viewport.y,
                             viewport.width, viewport.height);
-                if (!alerted && session.immersive) {
-                    //alert(viewport.x + " " + viewport.y + " " + viewport.width + " " + viewport.height);
-                    alerted = true;
-                }
-                renderer.draw(view.projectionMatrix, view.viewMatrix, viewport);
+                // Pass timestamp?
+                renderer.draw(view.projectionMatrix, view.viewMatrix, selected);
             }
         }
 
@@ -407,12 +371,36 @@ initialize = function() {
         // don't have a list of view to loop through, but otherwise all of the
         // WebGL drawing logic is exactly the same.
 
-        renderer.draw(projectionMatrix, viewMatrix, null);
+        renderer.draw(projectionMatrix, viewMatrix, false);
         renderer.endFrame();
     }
+    xrButton = new XRDeviceButton({
+        onRequestSession: onRequestSession,
+        onEndSession: onEndSession
+    });
+    document.querySelector('header').appendChild(xrButton.domElement);
 
-    // Start the XR application.
-    initXR();
+    // Find browser capabilities
+    if (navigator.xr) {
+        navigator.xr.supportsSessionMode('immersive-vr').then(() => {
+            xrButton.enabled = true;
+        });
+
+        let outputCanvas = document.createElement('canvas');
+        let ctx = outputCanvas.getContext('xrpresent');
+
+        navigator.xr.requestSession({ outputContext: ctx })
+            .then((session) => {
+                document.body.appendChild(outputCanvas);
+                onSessionStarted(session);
+            })
+            .catch((err) => {
+                initFallback();
+            });
+    } else {
+        // If navigator.xr isn't present in the browser then we need to use
+        // the fallback rendering path.
+        initFallback();
+    }
 }
 })();
- 

@@ -431,7 +431,7 @@ vec3 transform(in vec3 p) {
     p.yz = rotate(p.yz,theta);
     p.zx = rotate(p.zx,-phi);
   }
-  if (!keypress(CHAR_R)) {
+  if (keypress(CHAR_R)) {
     float t = iTime;
     p.yz = rotate(p.yz, 0.1*t);
     p.zx = rotate(p.zx, 0.222*t);
@@ -444,20 +444,27 @@ void mainFun(out vec4 fragColor, vec2 fragCoord, vec3 p, vec3 r) {
   diffuse = 1.0-ambient;
   specular = 0.8;
   specularpow = 10.0;
-  p = transform(p);
-  r = transform(r);
-  light = transform(light);
   light = normalize(light);
+  // Screenspace ray derivatives
   vec3 drdx = dFdx(r);
   vec3 drdy = dFdy(r);
+  vec4 rcentre = inverse(iView)*vec4(0,0,-1,0);
+  // Sanity check!
+  assert(eq(abs(rcentre.w),0.0));
+  assert(eq(length(rcentre),1.0));
   vec3 color = vec3(0);
-  const float AA = 2.0;
-  for (float i = 0.0; i < AA; i++) {
-    for (float j = 0.0; j < AA; j++) {
-      color += scene(p,normalize(r+i/AA*drdx+j/AA*drdy));
+  float k = dot(r,rcentre.xyz);
+  // Just antialias the central part of the image.
+  float aa = float(k > 0.96 ? 3 : k > 0.9 ? 2 : 1);
+  if (iMouse.x > 0.0) aa = 1.0; // Just for comparison
+  for (float i = 0.0; i < aa; i++) {
+    for (float j = 0.0; j < aa; j++) {
+      color += scene(p,normalize(r+i/aa*drdx+j/aa*drdy));
     }
   }
-  color /= AA*AA;
+  color /= aa*aa;
+  if (dot(r,rcentre.xyz) > 0.999) color.b = 1.0;
+  //color *= aa/3.0; // Show aa bands
   if (alert) color.x = 1.0;
   fragColor = vec4(sqrt(color),1);
 }
@@ -475,5 +482,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
   camera *= 0.1*float(10+keycount(KEY_DOWN)-keycount(KEY_UP));
   vec3 p = vec3(0,0,camera);
   vec3 r = vec3(uv,-2);
+  p = transform(p);
+  r = transform(r);
+  light = transform(light);
   mainFun(fragColor,fragCoord,p,r);
 }
