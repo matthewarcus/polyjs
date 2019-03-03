@@ -893,3 +893,123 @@ var Geometry = {};
     Geometry.apply4 = apply4;
     Geometry.test = test;
 }())
+
+
+function testit() {
+    let Vector = Geometry.Vector
+    let dot = Vector.dot
+    let cross = Vector.cross
+    let sub = Vector.sub
+    let add = Vector.add
+    let mul = Vector.mul
+    function calc() {
+        let p = [0,0,0]
+        let q = [1,0,0]
+        let r = [1,1,0]
+        let s = [1,1,1]
+        let P = cross(sub(r,q),sub(q,s))
+        let Q = cross(sub(r,s),sub(r,p))
+        let R = cross(sub(s,p),sub(s,q))
+        let S = cross(sub(p,q),sub(p,r))
+
+        console.log(p,q,r,s);
+        console.log(P,Q,R,S);
+        console.log(dot(P,q),dot(Q,r),dot(R,s),dot(S,p));
+    }
+    calc()
+    let p = [0,0,0,1]
+    let q = [1,0,0,1]
+    let r = [1,1,0,1]
+    let s = [1,1,1,1]
+
+    let K = 0.70711
+    let P = [ -1, 0, 0, 1 ]
+    let Q = [ K, -K, 0, 0 ]
+    let R = [ 0, K, -K, 0 ]
+    let S = [ 0, 0, 1, 0 ]
+
+    function MP(p) {
+        P = [-1,0,0];
+        return sub(p,mul(P,2.0*(dot(p,P)+1)));
+    }
+    function MQ(p) {
+        Q = [K,-K,0];
+        return sub(p,mul(Q,2.0*dot(p,Q)));
+    }
+    function MR(p) {
+        R = [0,K,-K];
+        return sub(p,mul(R,2.0*dot(p,R)));
+    }
+    function MS(p) {
+        S = [0,0,1];
+        return sub(p,mul(S,2.0*dot(p,S)));
+    }
+
+    console.log(dot(p,P))
+    console.log(dot(q,P))
+    console.log(dot(r,P))
+    console.log(dot(s,P))
+    console.log()
+
+    console.log(dot(p,Q))
+    console.log(dot(q,Q))
+    console.log(dot(r,Q))
+    console.log(dot(s,Q))
+    console.log()
+    
+    console.log(dot(p,R))
+    console.log(dot(q,R))
+    console.log(dot(r,R))
+    console.log(dot(s,R))
+    console.log()
+
+    console.log(dot(p,S))
+    console.log(dot(q,S))
+    console.log(dot(r,S))
+    console.log(dot(s,S))
+    console.log()
+    function tri2bary(tri) {
+        let tp = tri[0];
+        let tq = 1.414*tri[1];
+        let tr = 1.414*tri[2];
+        let ts = tri[3];
+        let len = tp+tq+tr+ts
+        tp /= len; tq /= len; tr /= len; ts /= len;
+        return add(add(mul(p,tp),mul(q,tq)),
+                   add(mul(r,tr),mul(s,ts)))
+    }
+    function test(tri) {
+        let a = tri2bary(tri)
+        console.log(tri,a,dot(a,P),dot(a,Q),dot(a,R),dot(a,S));
+    }
+
+    // test([1,1,1,1])
+    // test([1,1,1,0])
+    // test([1,0,1,0])
+    // test([1,0,0,0])
+    // test([0,1,0,0])
+    // test([0,0,1,0])
+    // test([0,0,0,1])
+
+    let a = [ 0.7928748964374482, 0.5, 0.20712510356255182 ];
+    console.log(a);
+    for (let i of [MP,MQ,MR,MS]) {
+        console.log(i(i(a)));
+        console.log(i([0,0,0]));
+        console.log(i([1,0,0]));
+        console.log(i([1,1,0]));
+        console.log(i([1,1,1]));
+        console.log()
+    }
+    console.log(MP(MQ(a)));
+    console.log(MQ(MP(a)));
+    console.log(MP(MR(a)));
+    console.log(MP(MS(a)));
+    console.log(MQ(MR(a)));
+    console.log(MR(MQ(a)));
+    console.log(MQ(MS(a)));
+    console.log(MR(MS(a)));
+    console.log(MS(MR(a)));
+    
+}
+//testit();
