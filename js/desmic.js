@@ -56,6 +56,7 @@
             facecolor = facecolor || Color.straw;
             addline(x,y,color); addline(y,z,color); addline(z,x,color);
             addline(x,t,color); addline(y,t,color); addline(z,t,color);
+            // return; // Uncomment to just show lines.
             addface([x,y,z],facecolor);
             addface([x,y,t],facecolor);
             addface([x,z,t],facecolor);
