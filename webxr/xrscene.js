@@ -9,7 +9,7 @@ function Renderer(gl,url,oncompletion) {
     let renderer = this;
     this.gl = gl;
     this.iMatrix = mat4.create();
-    url += "?" + new Date().getTime(); // Skip caching
+    //url += "?" + new Date().getTime(); // Skip caching
     const request = new XMLHttpRequest();
     request.open("GET", url);
     request.onreadystatechange = function() {
@@ -46,11 +46,15 @@ Renderer.prototype.finalize = function (fstext,oncompletion) {
         "void mainVR( out vec4 fragColor, in vec2 fragCoord,",
         "             in vec3 fragRayOrigin, in vec3 fragRayDir);",
         "void main() {",
-        "  vec4 p = vec4(vTextureCoord,0,1);",
-        "  vec4 eye = vec4(0,0,1,0);",
-        "  mat4 m = iMatrix; //inverse(iProjection*iView);",
+        //"  vec4 p = vec4(2.0*gl_FragCoord.xy/iResolution.xy-1.0,0,1);",
+        "  vec4 p = vec4(vTextureCoord,0,1);", // -1 <= z <= 1
+        "  vec4 eye = vec4(0,0,1,0);", // Infinity
+        //"  mat4 m = iMatrix; //inverse(iProjection*iView);",
+        //"  mat4 m = inverse(iView);",
+        "  mat4 m = inverse(iProjection*iView);",
         "  p = m*p;",
-        "  eye = m*eye;",
+        //"  eye = m*eye;",
+        "  eye = inverse(iView)*vec4(0,0,0,1);",
         "  p /= p.w;",
         "  eye /= eye.w;",
         "  mainVR(outColor,vec2(0),eye.xyz,normalize(p.xyz-eye.xyz));",
@@ -94,6 +98,9 @@ Renderer.prototype.finalize = function (fstext,oncompletion) {
         }
     }
 
+    //let fsobj = JSON.parse(fstext);
+    //fstext = fsobj['Shader']['renderpass']['0']['code'];
+    //console.log(fstext);
     this.program = initShaders(VS,FSpreamble + fstext);
     if (!this.program) return;
 
@@ -110,7 +117,7 @@ Renderer.prototype.finalize = function (fstext,oncompletion) {
     oncompletion();
 }
 
-Renderer.prototype.draw = function (projectionMatrix, viewMatrix) {
+Renderer.prototype.draw = function (projectionMatrix, viewMatrix, viewport) {
     const program = this.program;
     if (!program) {
         console.log("Program not ready!");
@@ -132,7 +139,16 @@ Renderer.prototype.draw = function (projectionMatrix, viewMatrix) {
     gl.uniformMatrix4fv(gl.getUniformLocation(program, "iView"), false, viewMatrix);
     gl.uniformMatrix4fv(gl.getUniformLocation(program, "iProjection"), false, projectionMatrix);
     gl.uniformMatrix4fv(gl.getUniformLocation(program, "iMatrix"), false, iMatrix);
-    gl.uniform4f(gl.getUniformLocation(program, "iResolution"), gl.canvas.width, gl.canvas.height,0,0);
+    let devicePixelRatio = window.devicePixelRatio || 1;
+    //let width = gl.canvas.clientWidth, height = gl.canvas.clientHeight;
+    let width = gl.canvas.width;
+    let height = gl.canvas.height;
+    if (viewport) {
+        width = viewport.width;
+        height = viewport.height;
+    }
+    //let width = gl.canvas.drawingBufferWidth, height = gl.canvas.drawingBufferHeight;
+    gl.uniform4f(gl.getUniformLocation(program, "iResolution"),width*devicePixelRatio, height*devicePixelRatio,0,0);
     gl.uniform4f(gl.getUniformLocation(program, "iMouse"),0,0,0,0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     let err = gl.getError();
@@ -193,7 +209,13 @@ initialize = function() {
     let viewMatrix = mat4.create();
 
     let running = true;
+    //let shaderID = "4sX3Rn"
+    //let shaderID = "lttfDH"
+    //let shaderID = "lsB3zR"
+    //let shaderurl = "https://www.shadertoy.com/api/v1/shaders/" + shaderID + "?key=fdntwh"
     let shaderurl = "goursat.glsl"; // Get this from URL
+
+    let mousedown = false;
 
     // The main function - move this to the bottom?
     function initXR() {
@@ -238,6 +260,7 @@ initialize = function() {
 
             // Space bar is stop/start animation
             function keypressHandler(event) {
+                //alert(event.charCode);
                 if (!event.ctrlKey) {
                     // Ignore event if control key pressed.
                     var c = String.fromCharCode(event.charCode)
@@ -252,7 +275,6 @@ initialize = function() {
                     }
                 }
             }
-            
             // We need to track the canvas size in order to resize the WebGL
             // backbuffer width and height, as well as update the projection matrix
             // and adjust the viewport.
@@ -284,6 +306,15 @@ initialize = function() {
         });
 
         renderer = new Renderer(gl,shaderurl,callback);
+
+        function onMouseDown( event ) {
+            mousedown = true;
+        }
+        function onMouseUp( event ) {
+            mousedown = false;
+        }
+        window.addEventListener( 'mousedown', onMouseDown, false );
+        window.addEventListener( 'mouseup', onMouseUp, false );
     }
 
     function onRequestSession() {
@@ -303,6 +334,7 @@ initialize = function() {
         session.addEventListener('end', onSessionEnded);
 
         initGL(true, function() {
+
             session.baseLayer = new XRWebGLLayer(session, gl);
 
             session.requestReferenceSpace({ type: 'stationary', subtype: 'eye-level' }).then((refSpace) => {
@@ -327,6 +359,7 @@ initialize = function() {
         }
     }
 
+    let alerted = false;
     function onXRFrame(t, frame) {
         let session = frame.session;
         let refSpace = session.immersive ?
@@ -346,8 +379,11 @@ initialize = function() {
                 let viewport = session.baseLayer.getViewport(view);
                 gl.viewport(viewport.x, viewport.y,
                             viewport.width, viewport.height);
-
-                renderer.draw(view.projectionMatrix, view.viewMatrix);
+                if (!alerted && session.immersive) {
+                    //alert(viewport.x + " " + viewport.y + " " + viewport.width + " " + viewport.height);
+                    alerted = true;
+                }
+                renderer.draw(view.projectionMatrix, view.viewMatrix, viewport);
             }
         }
 
@@ -371,7 +407,7 @@ initialize = function() {
         // don't have a list of view to loop through, but otherwise all of the
         // WebGL drawing logic is exactly the same.
 
-        renderer.draw(projectionMatrix, viewMatrix);
+        renderer.draw(projectionMatrix, viewMatrix, null);
         renderer.endFrame();
     }
 
