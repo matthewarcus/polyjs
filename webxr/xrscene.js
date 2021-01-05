@@ -6,10 +6,19 @@ function xrscene(mode) {
     if (mode != VR_MODE && mode != AR_MODE) {
         throw new Error('Invalid XR mode')
     }
-    let sessiontype =
-        mode == VR_MODE ? 'immersive-vr':
-        mode == AR_MODE ? 'immersive-ar' :
-        null
+    let sessiontype = null;
+    let buttonname = null;
+    let modename = null;
+    if (mode == VR_MODE) {
+        sessiontype = 'immersive-vr';
+        buttonname = 'vr-button';
+        modename = 'VR';
+    } 
+    if (mode == AR_MODE) {
+        sessiontype = 'immersive-ar';
+        buttonname = 'ar-button';
+        modename = 'AR';
+    } 
 
     let referencespace = 'local';
     
@@ -21,7 +30,7 @@ function xrscene(mode) {
     //shaderID = "XdGczw"     // parallepiped
     //shaderID = "4tSBDz"     // inverted spheres
 
-    const xrButton = document.getElementById('xr-button');
+    const xrButton = document.getElementById(buttonname);
     let xrSession = null;
     let xrRefSpace = null;
     let gl = null;
@@ -75,6 +84,7 @@ function xrscene(mode) {
             "  vec4 eye = vec4(0,0,1,0);",         // z-infinity
             "  mat4 m = iMatrix;",
             "  mainVR(outColor,m*eye,m*screenpos);",
+            (mode == VR_MODE ? "  outColor.a = 1.0;" : ""),
             "}",
             "#define HW_PERFORMANCE 0", // Some Shadertoys use this to set AA
             "#line 1",
@@ -168,7 +178,7 @@ function xrscene(mode) {
     function onSessionEnded(event) {
         console.log("WebXR session ended");
         xrSession = null;
-        xrButton.textContent = 'Enter VR';
+        xrButton.textContent = 'Enter ' + modename
 
         // In this simple case discard the WebGL context too, since we're not
         // rendering anything else to the screen with it.
@@ -204,7 +214,7 @@ function xrscene(mode) {
         
     function onSessionStarted (session) {
         xrSession = session;
-        xrButton.textContent = 'Exit VR';
+        xrButton.textContent = 'Exit ' + modename;
         session.addEventListener('end', onSessionEnded);
         const webglCanvas = document.createElement('canvas');
         gl = webglCanvas.getContext('webgl2', { xrCompatible: true })
@@ -243,7 +253,7 @@ function xrscene(mode) {
         navigator.xr.isSessionSupported(sessiontype).then((supported) => {
             if (supported) {
                 xrButton.addEventListener('click', onButtonClicked);
-                xrButton.textContent = 'Enter VR';
+                xrButton.textContent = 'Enter ' + modename;
                 xrButton.disabled = false;
             }
         });

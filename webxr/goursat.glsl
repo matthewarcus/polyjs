@@ -424,7 +424,7 @@ void mainFun(out vec4 fragColor, vec3 p, vec3 r, vec3 rcentre) {
       vec3 col1;
       // What to do with partially visible pixels?
       if (!scene(p,normalize(r+(i-0.5*aa)/aa*drdx+(j-0.5*aa)/aa*drdy),col1)) {
-        fragColor = vec4(0,0,0,1);
+        fragColor = vec4(0);
         return;
       }
       color += col1;
@@ -445,7 +445,7 @@ void mainVR(out vec4 fragColor, vec4 eye, vec4 screenpos) {
   // The origin of the world is at the viewer, so apply an offset
   // to the camera position (or equivalently, move the scene
   // further away).
-  vec3 offset = vec3(0,0,6);
+  vec3 offset = vec3(0,0,8);
   mainFun(fragColor,eye.xyz+offset,(screenpos-eye).xyz,rcentre.xyz);
 }
 
