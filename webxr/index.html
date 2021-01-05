@@ -31,12 +31,6 @@
     <title>Raytraced WebXR Demo</title>
 
     <link href='css/common.css' rel='stylesheet'></link>
-
-    <!--This script patches up around implementation differences in past browser versions
-        so that the samples can always be written against the most recent spec changes.
-        It won't be necessary after the API has been officially shipped for a bit.-->
-    <script src='js/webxr-version-shim.js'></script>
-    <script src='js/webxr-button.js'></script>
     <script src='js/gl-matrix-min.js'></script>
     <script src='xrscene.js'></script>
   </head>
@@ -48,8 +42,9 @@
           Demo of a basic raytraced scene, displayed with WebXR. 
           <a class="back" href="./">Back</a>
         </p>
+        <button id="xr-button" class="barebones-button" disabled>XR not found</button>
       </details>
     </header>
-    <script>initialize()</script>
+    <script>xrscene(VR_MODE)</script>
   </body>
 </html>

@@ -1,3 +1,19 @@
+#if 0
+#version 300 es
+precision highp float;
+uniform float iTime;
+uniform vec2 iResolution;
+uniform vec4 iMouse;
+
+out vec4 outColor;
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord );
+
+void main() {
+  mainImage(outColor, gl_FragCoord.xy);
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Goursat Quartic Surfaces
@@ -18,20 +34,18 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+uniform mat4 iView; // Not used for Shadertoy - view matrix in VR
+
 // PARAMS
-const float PI =  3.141592654;
+bool dorotate = true;
 
 // Lighting
-vec3 light = vec3(1,1,1);
-float ambient;
-float diffuse;
-float specular = 0.4;
-float specularpow = 4.0;
+vec3 light = normalize(vec3(1,1,1));
+float ambient = 0.4;
+float diffuse = 0.6;
+float specular = 0.8;
+float specularpow = 10.0;
 vec3 specularcolor = vec3(1);
-
-#if __VERSION__ < 300
-#define texelFetch(a,b,c) (vec4(0))
-#endif
 
 // Debug
 bool alert = false;
@@ -52,45 +66,7 @@ bool eq(mat4 m, mat4 n) {
   return eq(m[0],n[0]) && eq(m[1],n[1]) && eq(m[2],n[2]) && eq(m[3],n[3]);
 }
 
-// Utilities
-bool keypress(int code) {
-  return texelFetch(iChannel0, ivec2(code,2),0).x != 0.0;
-}
-
-vec4 store(int i,int j) {
-  return texelFetch(iChannel1, ivec2(i,j),0);
-}
-int keycount(int key) {
-  return int(store(0,key).x);
-}
-
-const int CHAR_0 = 48;
-const int CHAR_A = 65;
-const int CHAR_B = 66;
-const int CHAR_C = 67;
-const int CHAR_D = 68;
-const int CHAR_E = 69;
-const int CHAR_F = 70;
-const int CHAR_G = 71;
-const int CHAR_L = 76;
-const int CHAR_M = 77;
-const int CHAR_N = 78;
-const int CHAR_O = 79;
-const int CHAR_P = 80;
-const int CHAR_Q = 81; // Dodgy approximation
-const int CHAR_R = 82;
-const int CHAR_S = 83;
-const int CHAR_T = 84;
-const int CHAR_U = 85;
-const int CHAR_V = 86;
-const int CHAR_X = 88;
-
-const int KEY_PAGE_UP = 33;
-const int KEY_PAGE_DOWN = 34;
-const int KEY_LEFT = 37;
-const int KEY_UP = 38;
-const int KEY_RIGHT = 39;
-const int KEY_DOWN = 40;
+const float PI =  3.141592654;
 
 vec2 rotate(vec2 p, float t) {
   return p * cos(t) + vec2(p.y, -p.x) * sin(t);
@@ -147,10 +123,7 @@ int cubic(float A, float B, float C, float D, out vec3 res) {
     t = -dq/A; if (t > 0.0) r = 1.324718*max(r,sqrt(t));
     x0 = X - s*r;
     if (x0 != X) {
-      // Kahan iterates from one side of the root until
-      // it is hit exactly. This doesn't work on my GPU
-      // probably because it doesn't implement IEEE754
-      // exactly.
+      // Newton-Raphson
       for (int i = 0; i < 6; i++) {
         X = x0;
         eval(X,A,B,C,D,q,dq,b1,c2);
@@ -180,12 +153,11 @@ float qcubic(float a, float b, float c) {
   // approximation. Never return < 0.
   assert(c <= 0.0);
   if (c == 0.0) return 0.0;
-  if (keypress(CHAR_Q)) {
+  if (false) {
     // This helps with double roots, but sometimes is
     // completely the wrong thing to do.
     // Further investigation required.
     if (c > -1e-6) {
-      //assert(false);
       if (b > 1e-10) return -c/b;
       //if (b > 0.0) return -c/b; // Keep it simple.
       if (b > -1e-4) return 0.0;
@@ -209,8 +181,8 @@ int quartic(vec4 coeffs, out vec4 res) {
   psi = qcubic(2.0*A-alpha*alpha, A*A+2.0*B*alpha-4.0*c4, -B*B);
   //assert(!isnan(psi));
   //assert(!isinf(psi));
-  assert(psi >= 0.0);
-  a = sqrt(psi);
+  //assert(psi >= 0.0);
+  a = sqrt(max(0.0,psi));
   beta = 0.5*(A + psi);
   if (psi <= 0.0) {
     b = sqrt(max(beta*beta-c4,0.0));
@@ -231,7 +203,7 @@ int quartic(float A, float B, float C, float D, float E, out vec4 roots) {
   int nroots;
   // There may be a better heuristic for this.
   // but this avoids the worst glitches.
-  if (keypress(CHAR_A) || !keypress(CHAR_B) && abs(E) < 10.0*abs(A)) {
+  if (abs(E) < 10.0*abs(A)) {
     vec4 coeffs = vec4(B,C,D,E)/A;
     nroots = quartic(coeffs,roots);
   } else {
@@ -244,7 +216,6 @@ int quartic(float A, float B, float C, float D, float E, out vec4 roots) {
       roots[i] = 1.0/roots[i];
     }
   }
-  assert(nroots == 0 || nroots == 2 || nroots == 4);
   return nroots;
 }
 
@@ -275,6 +246,8 @@ struct Surface {
 // t^2: 6pp.rr +  k[4(p.r)^2 + 2(p.p)] + k'a^2
 // t^3: 4pr.rr + 4k(p.r)
 // t^4: rr.rr +   k
+//
+// Can adjust p so that p.r = 0 & that simplifies things.
 
 int goursatsurface(Surface surface, vec3 p, vec3 r, out vec4 roots) {
   float k = surface.params[0];
@@ -288,9 +261,10 @@ int goursatsurface(Surface surface, vec3 p, vec3 r, out vec4 roots) {
   float a2 = a*a;
   float a4 = a2*a2;
   // Check we have adjusted p so that p.r = 0!
-  assert(eq(dot(p,r),0.0));
-  assert(eq(dot(r,r),1.0));
+  //assert(eq(dot(p,r),0.0));
+  //assert(eq(dot(r,r),1.0));
 #if 0
+  // Unoptimized version
   float pdr = dot(p,r);
   float A = dot(rr,rr) + k;
   float B = 4.0*dot(pr,rr) + 4.0*k*pdr;
@@ -298,6 +272,7 @@ int goursatsurface(Surface surface, vec3 p, vec3 r, out vec4 roots) {
   float D = 4.0*dot(pp,pr) + 4.0*k*(p2*pdr)           + 2.0*k1*a2*pdr;
   float E = dot(pp,pp)         + k*p2*p2 + k1*a2*p2 + k2*a4;
 #else
+  // Optimized, with p.r = 0
   float A =     dot(rr,rr) +     k;
   float B = 4.0*dot(pr,rr);
   float C = 6.0*dot(pp,rr) + 2.0*k*p2    + k1*a2;
@@ -343,31 +318,28 @@ int dosurface(Surface surface, vec3 p0, vec3 r, out vec4 roots) {
   return goursatsurface(surface,p0,r,roots);
 }
   
-vec3 donormal(Surface surface, vec3 p) {
+vec3 getnormal(Surface surface, vec3 p) {
   return goursatnormal(surface,p);
 }
   
-bool solve(Surface surface, vec3 p0, vec3 r, float tmin, inout Result result) {
+bool solve(Surface surface, vec3 p, vec3 r, float tmin, inout Result result) {
   vec4 roots;
-  int nroots = dosurface(surface,p0,r,roots);
+  int nroots = dosurface(surface,p,r,roots);
   // Find smallest root greater than tmin.
   float t = result.t;
   for (int i = 0; i < 4; i++) {
     if (i == nroots) break;
     if (roots[i] > tmin && roots[i] < t) {
-      vec3 p = p0+roots[i]*r;
-      if (!keypress(CHAR_C) || p.z > 0.0) {
-        t = roots[i];
-      }
+      t = roots[i];
     }
   }
   if (t == result.t) return false;
-  vec3 p = p0 + t*r;
-  vec3 n = donormal(surface, p);
+  p += t*r;
+  vec3 n = getnormal(surface, p);
   if (dot(n,r) > 0.0) n = -n;
   n = normalize(n);
   vec3 basecolor = abs(n);
-  if (surface.colorscheme == 1 && !keypress(CHAR_G)) {
+  if (surface.colorscheme == 1) {
     basecolor *= gridline(p);
   }
   result = Result(p,n,basecolor,t);
@@ -377,15 +349,16 @@ bool solve(Surface surface, vec3 p0, vec3 r, float tmin, inout Result result) {
 // Interesting parameters from:
 // https://www.mathcurve.com/surfaces.gb/goursat/goursat.shtml
 vec4 goursatparams(int i) {
-  if (i == 0) return vec4(0,-1,0,1);
-  if (i == 1) return vec4(-1,-0.25,0.25,1);
-  if (i == 2) return vec4(-1,1,1,1);
-  if (i == 3) return vec4(0,-2,2,1);
-  if (i == 4) return vec4(-0.5,-1,0.5,1);
-  if (i == 5) return vec4(-0.5,1,-1.5,1);
-  if (i == 6) return vec4(-1,4,-6,1);
-  if (i == 7) return vec4(-1,1,1,1);
-  if (i == 8) return vec4(-1,2,-2,1);
+  int index = 0;
+  if (i == index++) return vec4(0,-1,0,1);
+  if (i == index++) return vec4(0,-2,2,1);
+  if (i == index++) return vec4(-1,1,1,1);
+  if (i == index++) return vec4(-1,-0.25,0.25,1);
+  if (i == index++) return vec4(-0.5,-1,0.5,1);
+  if (i == index++) return vec4(-0.5,1,-1.5,1);
+  if (i == index++) return vec4(-1,4,-6,1);
+  if (i == index++) return vec4(-1,1,1,1);
+  if (i == index++) return vec4(-1,2,-2,1);
   else return vec4(-0.333,-0.666,0.666,1);
 }
 
@@ -394,44 +367,37 @@ int nparams = 10;
 int imod(int n, int m) {
     return n-n/m*m;
 }
-vec3 scene(vec3 p0, vec3 r) {
+
+bool scene(vec3 p0, vec3 r, out vec3 col) {
   // Solve from closest point to origin.
   // This make p0.r = 0.
   float tmin = -dot(p0,r);
   p0 += tmin*r;
   Result res = Result(vec3(0),vec3(0),vec3(0),1e8);
-  float ttime = 0.1*iTime;
-  float rtime = floor(ttime);
-  ttime -= rtime;
-  vec4 params;
-#if __VERSION__ < 300
-    params = mix(goursatparams(imod(int(rtime),nparams)),
-                 goursatparams(imod(int(rtime)+1,nparams)),
-                 ttime);
-#else
-  int isurface = max(0,keycount(KEY_RIGHT)-keycount(KEY_LEFT));
-  isurface %= nparams+1;
-  if (isurface == 0) {
-    params = mix(goursatparams(int(rtime)%nparams),
-                 goursatparams(int(rtime+1.0)%nparams),
-                 ttime);
-  } else {
-    params = goursatparams(isurface-1);
-  }
-#endif
+  float ttime = 0.5*iTime;
+  float rtime0 = floor(ttime);
+  float rtime1 = floor(ttime+0.5);
+  ttime = fract(2.0*ttime);
+  vec4 params = vec4(0);
+  params = mix(goursatparams(int(rtime0)%nparams),
+               goursatparams(int(rtime1)%nparams),
+               ttime);
   Surface surface = Surface(params,vec3(0),1);
-  if (!solve(surface,p0,r,-tmin,res)) return vec3(0);
-  return applylighting(res.basecolor,res.p,res.n,r);
+  if (!solve(surface,p0,r,-tmin,res)) return false;
+  col = applylighting(res.basecolor,res.p,res.n,r);
+  return true;
 }
 
 vec3 transform(in vec3 p) {
+#if 0
   if (iMouse.x > 0.0) {
     float theta = (2.0*iMouse.y-iResolution.y)/iResolution.y*PI;
     float phi = (2.0*iMouse.x-iResolution.x)/iResolution.x*PI;
     p.yz = rotate(p.yz,theta);
     p.zx = rotate(p.zx,-phi);
   }
-  if (keypress(CHAR_R)) {
+#endif
+  if (dorotate) {
     float t = iTime;
     p.yz = rotate(p.yz, 0.1*t);
     p.zx = rotate(p.zx, 0.222*t);
@@ -439,51 +405,56 @@ vec3 transform(in vec3 p) {
   return p;
 }
 
-void mainFun(out vec4 fragColor, vec2 fragCoord, vec3 p, vec3 r) {
-  ambient = 0.4;
-  diffuse = 1.0-ambient;
-  specular = 0.8;
-  specularpow = 10.0;
-  light = normalize(light);
+void mainFun(out vec4 fragColor, vec3 p, vec3 r, vec3 rcentre) {
+  p = transform(p);
+  r = normalize(transform(r));
+  // rcentre should be ray through centre of clipspace.
+  rcentre = normalize(transform(rcentre));
   // Screenspace ray derivatives
   vec3 drdx = dFdx(r);
   vec3 drdy = dFdy(r);
-  vec4 rcentre = inverse(iView)*vec4(0,0,-1,0);
-  // Sanity check!
-  assert(eq(abs(rcentre.w),0.0));
-  assert(eq(length(rcentre),1.0));
   vec3 color = vec3(0);
   float k = dot(r,rcentre.xyz);
   // Just antialias the central part of the image.
-  float aa = float(k > 0.96 ? 3 : k > 0.9 ? 2 : 1);
-  if (iMouse.x > 0.0) aa = 1.0; // Just for comparison
+  float aa0 = float(k > 0.96 ? 3 : k > 0.9 ? 2 : 1);
+  float aa = aa0;
+  if (iMouse.z > 0.0) aa = 1.0; // Just for comparison
   for (float i = 0.0; i < aa; i++) {
     for (float j = 0.0; j < aa; j++) {
-      color += scene(p,normalize(r+i/aa*drdx+j/aa*drdy));
+      vec3 col1;
+      // What to do with partially visible pixels?
+      if (!scene(p,normalize(r+(i-0.5*aa)/aa*drdx+(j-0.5*aa)/aa*drdy),col1)) {
+        fragColor = vec4(0,0,0,1);
+        return;
+      }
+      color += col1;
     }
   }
   color /= aa*aa;
-  if (dot(r,rcentre.xyz) > 0.999) color.b = 1.0;
-  //color *= aa/3.0; // Show aa bands
+  //if (dot(r,rcentre.xyz) > 0.999) color.b = 1.0;
+  color *= sqrt(aa0/3.0); // Show aa bands
   if (alert) color.x = 1.0;
   fragColor = vec4(sqrt(color),1);
 }
 
-void mainVR(out vec4 fragColor, vec2 fragCoord, vec3 p, vec3 r) {
-  float camera = 6.0;
-  p.z += camera;
-  mainFun(fragColor,fragCoord,p,r);
+void mainVR(out vec4 fragColor, vec4 eye, vec4 screenpos) {
+  eye /= eye.w;
+  screenpos /= screenpos.w;
+  vec4 rcentre = inverse(iView)*vec4(0,0,-1,0);
+  assert(eq(rcentre.w,0.0));
+  // The origin of the world is at the viewer, so apply an offset
+  // to the camera position (or equivalently, move the scene
+  // further away).
+  vec3 offset = vec3(0,0,6);
+  mainFun(fragColor,eye.xyz+offset,(screenpos-eye).xyz,rcentre.xyz);
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
   float scale = 1.0;
   float camera = 4.0;
   vec2 uv = scale*(2.0*fragCoord.xy - iResolution.xy)/iResolution.y;
-  camera *= 0.1*float(10+keycount(KEY_DOWN)-keycount(KEY_UP));
   vec3 p = vec3(0,0,camera);
   vec3 r = vec3(uv,-2);
-  p = transform(p);
-  r = transform(r);
-  light = transform(light);
-  mainFun(fragColor,fragCoord,p,r);
+  vec3 rcentre = vec3(0,0,-2);
+  mainFun(fragColor,p,r,rcentre);
 }
