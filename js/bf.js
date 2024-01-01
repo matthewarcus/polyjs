@@ -513,6 +513,97 @@ PolyContext.prototype.polygon = function(off,options) {
     return { vertices: vertices, faces: faces, needclone: true }
 }
 
+function makeplatonic(off,n) {
+    var Color = THREE.OFFLoader.Utils.Color
+    var vadd = THREE.OFFLoader.Utils.vadd
+    var vsub = THREE.OFFLoader.Utils.vsub
+    var vdot = THREE.OFFLoader.Utils.vdot
+    var vdist = THREE.OFFLoader.Utils.vdist
+    var vmul = THREE.OFFLoader.Utils.vmul
+    if (!off) return;
+    if (!off.vertices) return;
+    console.log("makeplatonic")
+    let vertices = off.vertices
+    //console.log(vertices[0])
+    let nvertices = vertices.length
+    let faces = off.faces
+    let newvertices = []
+    let newfaces = []
+    function addedge(p1,p2,color) {
+        newfaces.push({ vlist: [p1,p2], color: color })
+    }
+    function addvertex(p,color) {
+        for (let i = 0; i < newvertices.length; i++) {
+            if (vdist(p,newvertices[i]) < 0.001) return i;
+        }
+        //console.log("Vertex",p,color)
+        var i = newvertices.length
+        newvertices.push(p)
+        if (color) {
+            newfaces.push({ vlist: [i], color: color })
+        }
+        return i;
+    }
+    let scale = 0.25
+    let origin = vertices[0]
+    for (let i = 0; i < vertices.length; i++) {
+        vertices[i] = vsub(vertices[i],origin);
+    }
+    let NMAX = 7
+    let k0 = addvertex(vertices[0])
+    let k1 = addvertex(vmul(vertices[faces[0].vlist[1]],scale*NMAX))
+    let k2 = addvertex(vmul(vertices[faces[1].vlist[1]],scale*NMAX))
+    let k3 = addvertex(vmul(vertices[faces[2].vlist[1]],scale*NMAX))
+    //console.log(newvertices[k0])
+    //console.log(newvertices[k1])
+    //console.log(newvertices[k2])
+    //console.log(newvertices[k3])
+    addedge(k0,k1,Color.red)
+    addedge(k0,k2,Color.red)
+    addedge(k0,k3,Color.red)
+    for (let N = 1; N <= NMAX; N++) {
+        for (let faceindex = 0; faceindex < faces.length; faceindex++) {
+            let color = [Color.straw,Color.yellow][N%2];
+            //color = Color.white;
+            let face = faces[faceindex]
+            let vlist = face.vlist
+            if (vlist[0] == 0) continue
+            let faceorigin = vertices[vlist[0]]
+            let faceorigin2 = vmul(faceorigin,scale*N)
+            let vo = addvertex(faceorigin2)
+            let vo1 = addvertex(vadd(faceorigin2,vmul(vsub(vertices[vlist[1]],faceorigin),scale*N)))
+            let vo2 = addvertex(vadd(faceorigin2,vmul(vsub(vertices[vlist[vlist.length-1]],faceorigin),scale*N)))
+            addedge(vo,vo1,color)
+            addedge(vo,vo2,color)
+            for (let i = 1; i <= N; i++) {
+                for (let j = 1; j < vlist.length-1; j++) {
+                    let v0 = vertices[vlist[j]]
+                    let v1 = vertices[vlist[j+1]] // don't need mod
+                    let m = addvertex(vadd(vmul(vsub(v0,faceorigin),scale*i),faceorigin2))
+                    let n = addvertex(vadd(vmul(vsub(v1,faceorigin),scale*i),faceorigin2))
+                    addedge(m,n,color)
+                    for (let k = 1; k < i; k++) {
+                        addvertex(vadd(vmul(newvertices[m],k/i),
+                                       vmul(newvertices[n],(i-k)/i)));
+                    }
+                }
+            }
+        }
+    }
+    for (let i = 0; i < newvertices.length; i++) {
+        newvertices[i] = vadd(newvertices[i],origin);
+    }
+    for (let i = 0; i < vertices.length; i++) {
+        vertices[i] = vadd(vertices[i],origin);
+    }
+    return { vertices: newvertices, faces: newfaces };
+}
+
+PolyContext.prototype.platonic = function(off,options) {
+    off = makeplatonic(off,0);
+    return off;
+}
+
 PolyContext.prototype.dipolygonid = function(off,options) {
     if (off) {
         off = THREE.OFFLoader.dipolygonid(off)
