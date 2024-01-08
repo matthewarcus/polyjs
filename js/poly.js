@@ -329,8 +329,8 @@ PolyContext.prototype.processoptions = function(options) {
             context.offoptions.noedges = true;
         } else if (matches = arg.match(/^nofaces$/)) {
             context.offoptions.nofaces = true;
-        } else if (matches = arg.match(/^spline$/)) {
-            context.offoptions.dospline = true;
+        } else if (matches = arg.match(/^n=([\d.]+)$/)) {
+            context.offoptions.n = Number(matches[1]);
         } else {
             console.log("Ignoring parameter '" + arg + "'");
         }
@@ -954,7 +954,7 @@ function offload(file, context) {
         console.log(xhr);
     };
     var loader = new THREE.OFFLoader( manager );
-    loader.load( file,
+    loader.load( file+"?"+new Date().getTime(),
                  function (off) {
                      context.offdata = off
                      context.needclone = true
@@ -1036,15 +1036,18 @@ PolyContext.prototype.updategeometry = function(geometry,computenormals,colorsty
         geometry.addAttribute('normal', new THREE.BufferAttribute(normalarray,3));
         if (needuvs) geometry.addAttribute('uv', new THREE.BufferAttribute(uvarray,2));
         geometry.setDrawRange(0,context.nfaces*3);
-    } else {
+    } else if (geometry.attributes.position) {
         // Only display the parts we want
         geometry.attributes.position.needsUpdate = true;
         geometry.attributes.normal.needsUpdate = true;
         geometry.attributes.color.needsUpdate = true;
         if (needuvs) geometry.attributes.uv.needsUpdate = true;
         geometry.setDrawRange(0,context.nfaces*3);
+    } else {
+        return null;
     }
     if (computenormals) geometry.computeVertexNormals();
+    return geometry;
 }
 
 PolyContext.prototype.runOnCanvas = function(canvas,width,height,mainwindow) {
@@ -1377,58 +1380,62 @@ PolyContext.prototype.runOnCanvas = function(canvas,width,height,mainwindow) {
         setTimeout(function() { requestAnimationFrame( context.render ); },
                    1000 / 25 );
         var isoff = context.offfile || context.fnames.length > 0;
-        // We should be able to optimize just updating colors, at least for OFF models.
-        if (needupdate == PolyContext.UpdateModel || needupdate == PolyContext.UpdateColors) {
-            if (isoff) {
-                context.offdata = context.offdata || {}
-                var off = context.offdata
-                var options = context.offoptions
-                for (var i = 0; i < context.fnames.length; i++) {
-                    if (context.verbose) console.log("Calling ", context.fnames[i])
-                    off = context[context.fnames[i]](off,context.offoptions,context.stopwatch.running)
-                }
-                if (off && off.vertices) {
+        try {
+            // We should be able to optimize just updating colors, at least for OFF models.
+            if (needupdate == PolyContext.UpdateModel || needupdate == PolyContext.UpdateColors) {
+                if (isoff) {
+                    context.offdata = context.offdata || {}
+                    var off = context.offdata
+                    var options = context.offoptions
+                    for (var i = 0; i < context.fnames.length; i++) {
+                        if (context.verbose) console.log("Calling ", context.fnames[i])
+                        off = context[context.fnames[i]](off,context.offoptions,context.stopwatch.running)
+                    }
+                    if (off && off.vertices) {
+                        if (!context.vertices) context.vertices = [];
+                        if (!context.faces) context.faces = [];
+                        //THREE.OFFLoader.display(off, context.offgeom, options);
+                        THREE.OFFLoader.display2(off, context, options);
+                        context.basefaces = context.nfaces;
+                        if (context.docompound) {
+                            context.offcompound(off,context);
+                        }
+                    }
+                    var computenormals = false;
+                    var colorstyle = context.colorstyle;
+                } else {
+                    // Old-style polyhedron. Should merge with OFF-style display
+                    // Make sure we have the right color setting in material
+                    // We should only do this when material properties actually change
+                    var points = context.tours[context.tournum%context.tours.length];
+                    var tripoint = context.interpolatepoint(context.stopwatch.getTime(), points);
+
                     if (!context.vertices) context.vertices = [];
                     if (!context.faces) context.faces = [];
-                    //THREE.OFFLoader.display(off, context.offgeom, options);
-                    THREE.OFFLoader.display2(off, context, options);
-                    context.basefaces = context.nfaces;
-                    if (context.docompound) {
-                        context.offcompound(off,context);
-                    }
+                    context.drawcompound(function (init) {
+                        if (init) context.setup(tripoint); // Make basic polyhedron
+                        context.drawpolyhedron();
+                    });
+                    var computenormals = true;
+                    var colorstyle = 0;
                 }
-                var computenormals = false;
-                var colorstyle = context.colorstyle;
-            } else {
-                // Old-style polyhedron. Should merge with OFF-style display
-                // Make sure we have the right color setting in material
-                // We should only do this when material properties actually change
-                var points = context.tours[context.tournum%context.tours.length];
-                var tripoint = context.interpolatepoint(context.stopwatch.getTime(), points);
-
-                if (!context.vertices) context.vertices = [];
-                if (!context.faces) context.faces = [];
-                context.drawcompound(function (init) {
-                    if (init) context.setup(tripoint); // Make basic polyhedron
-                    context.drawpolyhedron();
-                });
-                var computenormals = true;
-                var colorstyle = 0;
+                if (!context.updategeometry(geometry,computenormals,colorstyle)) return;
+                // Display model normals
+                // Remove old edges unless we want a persistence of vision effect.
+                if (context.normalshelper) {
+                    scene.remove(context.normalshelper);
+                    context.normalshelper.geometry.dispose();
+                }
+                if (context.shownormals) {
+                    context.normalshelper = new THREE.VertexNormalsHelper(mesh, 2, 0x00ff00, 1);
+                    scene.add(context.normalshelper);
+                }
             }
-            context.updategeometry(geometry,computenormals,colorstyle);
-            // Display model normals
-            // Remove old edges unless we want a persistence of vision effect.
-            if (context.normalshelper) {
-                scene.remove(context.normalshelper);
-                context.normalshelper.geometry.dispose();
-            }
-            if (context.shownormals) {
-                context.normalshelper = new THREE.VertexNormalsHelper(mesh, 2, 0x00ff00, 1);
-                scene.add(context.normalshelper);
-            }
+            // Render our scene
+            context.renderer.render(scene, context.camera);
+        } catch(err) {
+            console.log("Error: ", err);
         }
-        // Render our scene
-        context.renderer.render(scene, context.camera);
 
         // And update for next time around
         needupdate = PolyContext.UpdateNone;
